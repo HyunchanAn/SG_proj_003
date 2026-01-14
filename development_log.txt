@@ -1,0 +1,31 @@
+# V-SAMS Development Log
+
+##### (0일차) 2026.01.04 #####
+- 목표: 서비스의 뼈대(Skeleton)를 만들고 로직의 흐름을 시뮬레이션 가능하게 함.
+- 주요 내용:
+    - Project 구조 설계 및 기본 환경 설정 (`requirements.txt`).
+    - `models/classifier.py`: ResNet50 백본과 Multi-Head 구조 구현 (초기 버전).
+    - `train.py`: DummyDataset을 이용한 학습 루프 시뮬레이션 구축.
+    - `labeler.py`: Streamlit을 활용한 기본적인 데이터 수집 도구 작성.
+    - `app.py`: 실제 모델 대신 파일명을 분석하는 가짜 로직(Mock Logic) 기반 웹 대시보드 구현.
+- 상태: "아직 뇌가 비어있음 (Untrained)" - 판단 능력 없음.
+
+---
+
+##### (1일차) 2026.01.14 #####
+"발사대(Launchpad)" 정비 및 통합 파이프라인 준비
+- 목표: 연구소에서 데이터를 받는 즉시 최적의 성능으로 학습하고, 다른 모듈(DeepDrop)과 통합될 수 있도록 코드를 실전 배치용으로 업그레이드.
+- 주요 진행 상황:
+    - [x] V-SAMS 모델 개조: 
+        - `forward` 함수에 `return_features` 옵션 추가.
+        - `extract_features` 메서드 추가하여 2048차원 특징 벡터 추출 가능하게 함 (외란 영향도를 분석할 홀딩 파워 예측 모델의 입력값 확보).
+    - [x] 실전형 학습 파이프라인 구축:
+        - `DummyDataset` 제거 및 실제 폴더 구조(`Material_Finish`) 연동 DataLoader 구현 완료.
+        - `Albumentations` 기반 증강 로직 설계 (HorizontalFlip, Rotate, BrightnessContrast 등).
+        - Multi-task 학습을 위한 재질/마감 듀얼 라벨 매핑 완료.
+    - [x] 데이터 수집 도구(labeler.py) 안정화:
+        - `hashlib`를 이용한 파일명 세니타이징 로직 추가 (한글 파일명 오류 방지).
+        - 타임스탬프 정밀도 향상(ms 단위)으로 중복 저장 방지 강화.
+    - [x] 최상위 통합 컨트롤러 설계:
+        - V-SAMS, DeepDrop, 물성 데이터를 융합하는 `integration_pipeline.py` 골격 작성 완료.
+- 현재 시점: 1월 28일 회의를 위한 '발사대(Launchpad)' 정비 완료. 데이터 수집 즉시 학습 및 통합 분석 가능.

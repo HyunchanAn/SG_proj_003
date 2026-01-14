@@ -21,33 +21,73 @@ st.set_page_config(
 # Load Model (Cached)
 @st.cache_resource
 def load_model():
-    # In a real scenario, we would load weights here.
-    # model.load_state_dict(torch.load('checkpoints/v_sams_model.pth'))
-    model = SurfaceClassifier(num_materials=6, num_finishes=5)
+    checkpoint_path = 'checkpoints/v_sams_model.pth'
+    # Initialize with current label counts
+    model = SurfaceClassifier(num_materials=6, num_finishes=7)
+    
+    if os.path.exists(checkpoint_path):
+        try:
+            model.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))
+            st.toast("✅ Real AI model weights loaded.")
+        except Exception as e:
+            st.error(f"Error loading weights: {e}")
+    else:
+        st.toast("⚠️ Weight file not found. Running in MOCK/Simulation mode.")
+    
     model.eval()
     return model
 
 model = load_model()
 
-# --- Mock AI Prediction Logic ---
-# Since we don't have trained weights yet, we simulate predictions based on filename or random consistency
-def mock_predict(image_name):
+# --- Prediction Logic ---
+def predict(image, image_name):
     """
-    Returns simplified mock probabilities for demonstration.
+    Real inference if model is trained, else simulation.
     """
-    time.sleep(1.5) # Simulate processing time
+    checkpoint_path = 'checkpoints/v_sams_model.pth'
     
+    if os.path.exists(checkpoint_path):
+        # Real Inference
+        from torchvision import transforms
+        preprocess = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ])
+        input_tensor = preprocess(image).unsqueeze(0)
+        
+        with torch.no_grad():
+            mat_logits, fin_logits = model(input_tensor)
+            mat_probs = torch.softmax(mat_logits, dim=1)[0]
+            fin_probs = torch.softmax(fin_logits, dim=1)[0]
+            
+        MATERIALS = ["Metal", "Plastic", "Glass", "Painted", "Wood", "Other"]
+        FINISHES = ["Mirror", "Rough", "Hairline", "Matte", "Glossy", "Pattern", "Other"]
+        
+        mat_idx = torch.argmax(mat_probs).item()
+        fin_idx = torch.argmax(fin_probs).item()
+        
+        return {
+            "Material": MATERIALS[mat_idx],
+            "Finish": FINISHES[fin_idx],
+            "Scores": {
+                MATERIALS[mat_idx]: mat_probs[mat_idx].item(),
+                FINISHES[fin_idx]: fin_probs[fin_idx].item()
+            }
+        }
+    
+    # Simulation logic (Mock)
+    time.sleep(1.0) 
     image_name = image_name.lower()
     
     if "mirror" in image_name or "shiny" in image_name or "101" in image_name:
-        return {"Material": "Metal", "Finish": "Mirror", "Scores": {"Metal": 0.92, "Plastic": 0.05, "Mirror": 0.95, "Rough": 0.02}}
+        return {"Material": "Metal", "Finish": "Mirror", "Scores": {"Metal": 0.92, "Mirror": 0.95}}
     elif "rough" in image_name or "sandblast" in image_name or "305" in image_name:
-        return {"Material": "Metal", "Finish": "Rough", "Scores": {"Metal": 0.88, "Plastic": 0.10, "Rough": 0.91, "Mirror": 0.05}}
+        return {"Material": "Metal", "Finish": "Rough", "Scores": {"Metal": 0.88, "Rough": 0.91}}
     elif "paint" in image_name or "glossy" in image_name or "500" in image_name:
-        return {"Material": "Painted", "Finish": "Glossy", "Scores": {"Painted": 0.94, "Metal": 0.03, "Glossy": 0.89, "Matte": 0.08}}
+        return {"Material": "Painted", "Finish": "Glossy", "Scores": {"Painted": 0.94, "Glossy": 0.89}}
     else:
-        # Default fallback
-        return {"Material": "Metal", "Finish": "Mirror", "Scores": {"Metal": 0.60, "Plastic": 0.30, "Mirror": 0.55, "Rough": 0.35}}
+        return {"Material": "Metal", "Finish": "Mirror", "Scores": {"Metal": 0.60, "Mirror": 0.55}}
 
 # --- Language Config ---
 LANG_DICT = {
@@ -189,7 +229,7 @@ if mode == txt["mode_user"]:
             st.subheader(txt["ai_analysis"])
             
             with st.spinner(txt["analyzing"]):
-                result = mock_predict(uploaded_file.name)
+                result = predict(image, uploaded_file.name)
             
             # Visualize Confidence
             st.success(txt["success"])

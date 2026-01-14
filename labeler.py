@@ -3,6 +3,7 @@ import os
 import shutil
 from datetime import datetime
 from PIL import Image
+import hashlib
 
 # --- Config ---
 DATASET_ROOT = "dataset"
@@ -21,11 +22,14 @@ def save_image(uploaded_file, material, finish):
     save_dir = os.path.join(DATASET_ROOT, "train", class_name)
     os.makedirs(save_dir, exist_ok=True)
     
-    # 2. Generate Filename (Time-based to avoid overwrite)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # 2. Generate Sanitized Filename (Safely handle non-English chars)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     original_name = uploaded_file.name
     name, ext = os.path.splitext(original_name)
-    new_filename = f"{timestamp}_{name}{ext}"
+    
+    # Create a short hash of the original name for uniqueness and safety
+    name_hash = hashlib.md5(name.encode('utf-8')).hexdigest()[:8]
+    new_filename = f"{timestamp}_{name_hash}{ext}"
     save_path = os.path.join(save_dir, new_filename)
     
     # 3. Save
