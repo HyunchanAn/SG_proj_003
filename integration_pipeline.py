@@ -1,16 +1,26 @@
 import torch
 import numpy as np
 from models.classifier import SurfaceClassifier
+import sys
+import os
 
-# Placeholder for DeepDrop Module 
-# (In a real scenario, this would be imported from the DeepDrop project)
-class AIContactAngleAnalyzer:
-    def __init__(self):
-        print("DeepDrop Analyzer (Mock) Initialized")
-    
-    def analyze(self, image):
-        # Mock analysis result (Contact Angle or Surface Free Energy)
-        return 45.0 
+# DeepDrop Project Path (Relative to V-SAMS)
+sys.path.append(os.path.join(os.path.dirname(__file__), '../DeepDrop-SFE/src'))
+
+try:
+    from ai_engine import AIContactAngleAnalyzer  # Real AI Engine
+    from physics_engine import DropletPhysics     # Physics Engine
+    print("✅ DeepDrop Module Loaded.")
+except ImportError:
+    print("⚠️ DeepDrop module not found. Using Mock.")
+    # Fallback Mock Class
+    class AIContactAngleAnalyzer:
+        def __init__(self):
+            print("DeepDrop Analyzer (Mock) Initialized")
+        
+        def analyze(self, image):
+            # Mock analysis result
+            return 45.0 
 
 class HoldingPowerPredictor:
     def __init__(self, vsams_checkpoint=None):

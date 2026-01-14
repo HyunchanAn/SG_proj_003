@@ -29,3 +29,21 @@
     - [x] 최상위 통합 컨트롤러 설계:
         - V-SAMS, DeepDrop, 물성 데이터를 융합하는 `integration_pipeline.py` 골격 작성 완료.
 - 현재 시점: 1월 28일 회의를 위한 '발사대(Launchpad)' 정비 완료. 데이터 수집 즉시 학습 및 통합 분석 가능.
+
+---
+
+##### (1.5일차) 2026.01.14 (추가 업데이트) #####
+"Launchpad 완성 및 핵심 엔진 연결"
+
+- Code Audit 결과 반영 (견고성 확인):
+    - **Feature Extraction 모드**: 단순 분류를 넘어 2048차원 벡터 추출을 통해 홀딩 파워 예측(Regression)을 위한 핵심 입력값 확보.
+    - **실전형 Data Pipeline**: Albumentations 증강 및 폴더 구조 자동 파싱으로 데이터만 넣으면 즉시 학습 가능한 상태.
+    - **현장 맞춤형 Labeler**: 파일명 Hash 처리 및 타임스탬프 고도화로 Windows/한글 환경에서의 충돌 원천 차단.
+
+- Action Item 완료:
+    - **Integration Pipeline 연결**: `integration_pipeline.py` 가 DeepDrop-SFE의 실제 모듈(`src/ai_engine`, `src/physics_engine`)을 Import하도록 연결.
+    - Mock 상태를 벗어나 실제 엔진과 물리 연산 모듈을 호출하는 구조로 변경 (Import 실패 시 Fallback 유지).
+    
+- Note: 
+    - DeepDrop-SFE 프로젝트는 현재 라이브러리화 진행 중 (https://github.com/HyunchanAn/DeepDrop-SFE/tree/stable/physics-fix).
+
