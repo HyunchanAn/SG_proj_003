@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-from models.classifier import SurfaceClassifier
+from vsams.models.classifier import SurfaceClassifier
 import os
 import glob
 from PIL import Image

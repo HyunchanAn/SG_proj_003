@@ -35,7 +35,9 @@ V-SAMS는 산업용 제품(피착제)의 사진을 분석하여 모재의 종류
 3. 의존성 패키지 설치:
    ```bash
    pip install -r requirements.txt
+   pip install -e .
    ```
+   * `pip install -e .` 명령어를 통해 `vsams` 패키지를 설치합니다. 이를 통해 프로젝트 내 어디서든 모듈을 import 할 수 있습니다.
 
 ## 사용법 (Usage)
 
@@ -67,20 +69,33 @@ python train.py
 python integration_pipeline.py
 ```
 
+### 5. 라이브러리 사용 (Library Usage)
+V-SAMS는 이제 파이썬 라이브러리로 제공됩니다. 다른 프로젝트에서 다음과 같이 사용할 수 있습니다.
+
+```python
+import vsams
+from vsams.models.classifier import SurfaceClassifier
+
+# 모델 초기화
+model = SurfaceClassifier(num_materials=6, num_finishes=7)
+print(f"V-SAMS Version: {vsams.__version__}")
+```
+
 ## 프로젝트 구조 (Project Structure)
 ```text
 V-SAMS/
+├── vsams/                  # 메인 패키지 (Source Code)
+│   ├── __init__.py         # 패키지 초기화
+│   ├── models/             # AI 모델 아키텍처 (특징 추출 모드 포함)
+│   └── utils/              # DB 로드/저장 및 검색 유틸리티
 ├── app.py                  # 메인 데모 애플리케이션 (Streamlit)
 ├── labeler.py              # 데이터 라벨링 도구 (Streamlit)
-├── train.py                # 실전 데이터 학습 스크립트 (Albumentations 적용)
+├── train.py                # 실전 데이터 학습 스크립트
 ├── integration_pipeline.py # V-SAMS + DeepDrop 통합 예측 골격
-├── development_log.txt     # 프로젝트 개발 이력 및 진행 상황
-├── database.json           # 제품 정보 및 추천 로직용 가상 DB
+├── setup.py                # 라이브러리 설치 설정 파일
+├── development_log.txt     # 프로젝트 개발 이력
+├── database.json           # 제품 정보 DB
 ├── data_collection_guide.md # 데이터 수집 가이드라인
-├── models/
-│   └── classifier.py       # AI 모델 아키텍처 (특징 추출 모드 포함)
-├── utils/
-│   └── db_handler.py       # DB 로드/저장 및 검색 유틸리티
 ├── requirements.txt        # 의존성 목록
 └── README.md               # 프로젝트 설명서
 ```

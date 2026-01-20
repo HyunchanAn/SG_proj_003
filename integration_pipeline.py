@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from models.classifier import SurfaceClassifier
+from vsams.models.classifier import SurfaceClassifier
 import sys
 import os
 

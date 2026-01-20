@@ -3,8 +3,8 @@ import torch
 import os
 from PIL import Image
 import time
-from models.classifier import SurfaceClassifier
-from utils.db_handler import query_recommendation, load_db, save_db
+from vsams.models.classifier import SurfaceClassifier
+from vsams.utils.db_handler import query_recommendation, load_db, save_db
 
 # ... (Existing Language Dict - omitted for brevity in replacement, but I need to make sure I don't delete it.
 # Actually, I should probably append the Admin strings to the dictionary first or handle it inline if it's easier.
