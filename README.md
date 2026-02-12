@@ -60,7 +60,10 @@ python -m streamlit run labeler.py
 수집된 데이터를 기반으로 모델을 학습시킵니다. 물리적 데이터가 부족한 경우, 오픈 데이터셋(MINC, DTD)을 활용하여 부트스트래핑할 수 있습니다.
 
 **데이터 부트스트래핑 (Data Bootstrapping)**:
-MINC(재질) 및 DTD(텍스처) 데이터셋을 자동으로 다운로드하고 V-SAMS 구조에 맞게 매핑합니다.
+스크립트를 통해 다음 오픈 데이터셋을 자동으로 다운로드 및 전처리합니다.
+* **MINC-2500** (Materials in Context): Hugging Face (`mcimpoi/minc-2500_split_1`)에서 다운로드. (재질 분류용)
+* **DTD** (Describable Textures Dataset): Oxford VGG (`dtd-r1.0.1`)에서 다운로드. (텍스처 분류용)
+
 ```bash
 python utils/download_datasets.py
 ```
