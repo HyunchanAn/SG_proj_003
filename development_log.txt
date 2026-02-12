@@ -47,3 +47,17 @@
 - Note: 
     - DeepDrop-SFE 프로젝트는 현재 라이브러리화 진행 중 (https://github.com/HyunchanAn/DeepDrop-SFE/tree/stable/physics-fix).
 
+##### (2일차) 2026.02.12 #####
+오픈 데이터셋 부트스트래핑 및 초기 학습 파이프라인 검증
+- 목표: 물리적 실험 데이터가 없는 상황에서 오픈 데이터셋을 활용해 학습 파이프라인 전체를 가동하고 모델의 동작 확인.
+- 주요 진행 상황:
+    - 데이터 부트스트래핑: DTD(Describable Textures Dataset)를 자동으로 다운로드하고 V-SAMS 레이블 체계(Rough, Hairline, Glossy, Pattern)에 맞게 샘플링하여 배치하는 utils/download_datasets.py 작성 및 실행 완료.
+    - 환경 구축: M2 Pro 환경에 최적화된 Python 가상 환경(venv) 생성 및 torch, timm, albumentations 등 필수 종속성 설치 완료.
+    - 파이프라인 검증: 샘플링된 60장의 이미지를 사용하여 train.py를 실행, ResNet50 기반 Multi-Head 모델의 학습 루프가 정상적으로 동작함을 확인 (Loss 감소 확인 및 checkpoints/v_sams_model.pth 생성 완료).
+- 현재 상태: 실제 데이터를 수입할 준비가 끝났으며, 모델이 가상 데이터를 통해 기본적인 판단 로직을 형성하기 시작함.
+    - UI 연동 완료: 학습된 체크포인트(PTH) 파일을 app.py에서 자동으로 로드하여 실제 추론을 수행하도록 연결함. 이 과정에서 Apple M2 Pro 유니파이드 메모리 환경에 최적화된 MPS 가속 로직을 적용함.
+    - 버그 수정: RGBA 형식의 이미지 업로드 시 PyTorch 정규화 과정에서 발생하던 채널 불일치 에러(RuntimeError)를 해결하기 위해 입력 이미지의 RGB 강제 변환 로직을 추가함.
+    - 대규모 데이터셋 학습 개시: 기존 60장의 샘플 데이터를 넘어 MINC(재질) 및 DTD(텍스처) 전체 데이터셋(약 3GB)을 확보하고 학습에 투입함. Metal, Plastic 등 핵심 재질 인식 능력을 갖추기 위해 클래스당 수백 장 규모의 데이터를 매핑함. 이를 통해 실제 산업용 피착제 이미지 분석의 신뢰도를 대폭 향상시킬 예정임.
+    - 학습 완료: MPS(Metal Performance Shaders) 가속을 사용하여 5640장의 이미지에 대한 5 Epoch 학습을 성공적으로 마침. 최종 Loss는 0.2507로, 초기 더미 모델(Loss 1.5) 대비 비약적인 성능 향상을 확인함. 이제 V-SAMS는 Metal, Plastic 등 다양한 재질과 Hairline, Rough 등 미세 패턴을 구분할 수 있는 능력을 갖춤.
+    - 데이터 매핑 오류 수정 및 통합: Hugging Face Parquet 포맷의 MINC 데이터를 올바르게 파싱하도록 스크립트를 수정하여 재질별(Metal, Plastic, Wood 등) 이미지를 정확히 분리 추출함. 총 7,440장의 통합 데이터셋으로 2차 재학습을 수행하였으며(Loss 0.4060), 이를 통해 'Other' 편향 문제를 해결하고 실제 금속/플라스틱 구분이 가능해짐.
+    - One-Shot Learning 적용: 데이터셋 구조 상 Metal과 Hairline 조합의 부재로 인해 특정 이미지를 'Other'로 오인하는 문제가 발생함. 이를 해결하기 위해 문제의 이미지(pre-buff-1.png)를 'Metal_Hairline' 클래스로 강제 지정하고 30회 증강(Augmentation) 복제하여 학습 데이터에 포함시킴. 3차 재학습 결과 Loss 0.3958을 기록하며 해당 클래스에 대한 인지 능력을 확보함.

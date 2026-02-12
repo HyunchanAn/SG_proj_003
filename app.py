@@ -23,7 +23,6 @@ st.set_page_config(
 @st.cache_resource
 def load_model():
     checkpoint_path = 'checkpoints/v_sams_model.pth'
-    # Initialize with current label counts
     model = SurfaceClassifier(num_materials=6, num_finishes=7)
     
     msg = ""
@@ -31,21 +30,29 @@ def load_model():
     
     if os.path.exists(checkpoint_path):
         try:
-            model.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))
-            msg = "✅ Real AI model weights loaded."
+            # MacBook Pro M2 Pro (Apple Silicon) MPS 가동
+            if torch.backends.mps.is_available():
+                device = torch.device("mps")
+            else:
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            state_dict = torch.load(checkpoint_path, map_location=device)
+            model.load_state_dict(state_dict)
+            model.to(device)
+            msg = f"실제 AI 모델 가동 중 (분석 장치: {device})"
             status = "real"
         except Exception as e:
-            msg = f"Error loading weights: {e}"
+            msg = f"모델 가중치 로드 실패: {e}"
             status = "error"
     else:
-        msg = "⚠️ Weight file not found. Running in MOCK/Simulation mode."
+        msg = "모델 파일 없음 (MOCK 시뮬레이션 모드)"
         status = "mock"
     
     model.eval()
     return model, msg, status
 
-model, load_msg, load_status = load_model()
+model_obj, load_msg, load_status = load_model()
 
+# UI 상단에 로드 상태 표시
 if load_status == "real":
     st.toast(load_msg)
 elif load_status == "mock":
@@ -56,22 +63,21 @@ else:
 # --- Prediction Logic ---
 def predict(image, image_name):
     """
-    Real inference if model is trained, else simulation.
+    학습된 모델이 있으면 실제 추론을 수행하고, 없으면 시뮬레이션 엔진을 가동합니다.
     """
-    checkpoint_path = 'checkpoints/v_sams_model.pth'
-    
-    if os.path.exists(checkpoint_path):
-        # Real Inference
+    if load_status == "real":
         from torchvision import transforms
         preprocess = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ])
-        input_tensor = preprocess(image).unsqueeze(0)
+        
+        device = next(model_obj.parameters()).device
+        input_tensor = preprocess(image).unsqueeze(0).to(device)
         
         with torch.no_grad():
-            mat_logits, fin_logits = model(input_tensor)
+            mat_logits, fin_logits = model_obj(input_tensor)
             mat_probs = torch.softmax(mat_logits, dim=1)[0]
             fin_probs = torch.softmax(fin_logits, dim=1)[0]
             
@@ -101,7 +107,8 @@ def predict(image, image_name):
     elif "paint" in image_name or "glossy" in image_name or "500" in image_name:
         return {"Material": "Painted", "Finish": "Glossy", "Scores": {"Painted": 0.94, "Glossy": 0.89}}
     else:
-        return {"Material": "Metal", "Finish": "Mirror", "Scores": {"Metal": 0.60, "Mirror": 0.55}}
+        # 가상 데이터셋에서 학습된 초기 패턴 대응
+        return {"Material": "Other", "Finish": "Mirror", "Scores": {"Other": 0.60, "Mirror": 0.55}}
 
 # --- Language Config ---
 LANG_DICT = {
@@ -233,7 +240,8 @@ if mode == txt["mode_user"]:
 
     if uploaded_file is not None:
         # 1. Display Image
-        image = Image.open(uploaded_file)
+        # RGBA 이미지가 업로드될 경우 정규화 과정에서 채널 수 불일치 에러가 발생하므로 RGB로 변환
+        image = Image.open(uploaded_file).convert("RGB")
         with col1:
             st.subheader(txt["img_acq"])
             st.image(image, caption=txt["img_caption"], use_container_width=True)

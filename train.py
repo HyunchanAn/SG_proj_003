@@ -62,9 +62,14 @@ class SurfaceDataset(Dataset):
         
         return image, mat_label, fin_label
 
-def train_model(num_epochs=10, batch_size=8, lr=1e-4):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
+def train_model(num_epochs=10, batch_size=32, lr=1e-4):
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    print(f"학습 장치 설정: {device}")
     
     # 1. Augmentations (Albumentations)
     train_transform = A.Compose([

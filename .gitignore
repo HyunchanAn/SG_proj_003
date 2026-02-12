@@ -38,3 +38,9 @@ venv/
 # Project specific
 database_local.json
 .DS_Store
+venv/
+dataset/
+dtd/
+minc-2500/
+__pycache__/
+*.DS_Store
