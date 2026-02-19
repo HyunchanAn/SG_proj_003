@@ -44,9 +44,6 @@
     - Integration Pipeline 연결: `integration_pipeline.py` 가 DeepDrop-SFE의 실제 모듈(`src/ai_engine`, `src/physics_engine`)을 Import하도록 연결.
     - Mock 상태를 벗어나 실제 엔진과 물리 연산 모듈을 호출하는 구조로 변경 (Import 실패 시 Fallback 유지).
     
-- Note: 
-    - DeepDrop-SFE 프로젝트는 현재 라이브러리화 진행 중 (https://github.com/HyunchanAn/DeepDrop-SFE/tree/stable/physics-fix).
-
 ##### (2일차) 2026.02.12 #####
 오픈 데이터셋 부트스트래핑 및 초기 학습 파이프라인 검증
 - 목표: 물리적 실험 데이터가 없는 상황에서 오픈 데이터셋을 활용해 학습 파이프라인 전체를 가동하고 모델의 동작 확인.
