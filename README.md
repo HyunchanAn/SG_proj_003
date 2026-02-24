@@ -5,9 +5,8 @@ V-SAMS는 산업용 제품(피착제)의 사진을 분석하여 모재의 종류
 
 핵심 기능:
 - 시각적 분석 (Visual Analysis): 딥러닝을 활용하여 재질(예: 금속, 플라스틱)과 질감(예: 거울면, 거친면)을 동시에 분류합니다.
-- 고차원 특징 추출 (Feature Extraction): 홀딩 파워 예측을 위한 2048차원 벡터 추출 기능을 제공합니다.
-- 지능형 매칭 (Intelligent Matching): 시각적 특성을 물리적 속성으로 변환하여 적합한 보호 필름을 추천합니다.
-- 통합 분석 (Integration): V-SAMS 비전 데이터와 DeepDrop 접촉각 데이터를 결합한 최종 성능 예측이 가능합니다.
+- 고차원 특징 추출 (Feature Extraction): 재질의 미세 특성 분석을 위한 2048차원 특징 벡터 추출 기능을 제공합니다.
+- 라이브러리 독립성: 다른 파이썬 프로젝트나 AI 파이프라인에 즉시 통합 가능한 독립 패키지 구조를 가집니다.
 
 ## 기술 스택 (Tech Stack)
 - AI Core: PyTorch, timm (ResNet50), Albumentations
@@ -91,10 +90,10 @@ python train.py
 * M2 Pro (Apple Silicon) MPS 가속을 자동으로 활용하여 고속 학습을 수행합니다.
 * Albumentations를 통한 데이터 증강과 Multi-task 학습을 수행합니다.
 
-### 4. 통합 예측 파이프라인 (Integration)
-비전 데이터와 물성 데이터를 결합하여 분석합니다.
+### 4. 확장 예제 (Examples)
+독립 라이브러리로서 타 소프트웨어(예: 접촉각 분석 엔진 등)와 연동하는 예제 코드를 제공합니다.
 ```bash
-python integration_pipeline.py
+python examples/integration_example.py
 ```
 
 ### 5. 라이브러리 사용 (Library Usage)
@@ -113,17 +112,15 @@ print(f"V-SAMS Version: {vsams.__version__}")
 ```text
 V-SAMS/
 ├── vsams/                  # 메인 패키지 (Source Code)
-│   ├── __init__.py         # 패키지 초기화
-│   ├── models/             # AI 모델 아키텍처 (특징 추출 모드 포함)
-│   └── utils/              # DB 로드/저장 및 검색 유틸리티
+│   ├── models/             # AI 모델 아키텍처
+│   └── utils/              # DB 핸들러 및 유틸리티
+├── examples/               # 타 시스템 연동 예제
 ├── app.py                  # 메인 데모 애플리케이션 (Streamlit)
 ├── labeler.py              # 데이터 라벨링 도구 (Streamlit)
-├── train.py                # 실전 데이터 학습 스크립트
-├── integration_pipeline.py # V-SAMS + DeepDrop 통합 예측 골격
-├── setup.py                # 라이브러리 설치 설정 파일
+├── train.py                # 학습 스크립트
+├── setup.py                # 패키지 설치 설정
 ├── development_log.txt     # 프로젝트 개발 이력
 ├── database.json           # 제품 정보 DB
-├── data_collection_guide.md # 데이터 수집 가이드라인
 ├── requirements.txt        # 의존성 목록
 └── README.md               # 프로젝트 설명서
 ```

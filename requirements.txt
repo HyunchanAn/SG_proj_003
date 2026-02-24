@@ -10,3 +10,6 @@ numpy
 pandas
 pillow
 scikit-learn
+requests
+tqdm
+huggingface_hub
