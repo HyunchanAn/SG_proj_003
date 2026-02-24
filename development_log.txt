@@ -1,19 +1,43 @@
 # V-SAMS Development Log
 
-##### (0일차) 2026.01.04 #####
-- 목표: 서비스의 뼈대(Skeleton)를 만들고 로직의 흐름을 시뮬레이션 가능하게 함.
-- 주요 내용:
-    - Project 구조 설계 및 기본 환경 설정 (`requirements.txt`).
-    - `models/classifier.py`: ResNet50 백본과 Multi-Head 구조 구현 (초기 버전).
-    - `train.py`: DummyDataset을 이용한 학습 루프 시뮬레이션 구축.
-    - `labeler.py`: Streamlit을 활용한 기본적인 데이터 수집 도구 작성.
-    - `app.py`: 실제 모델 대신 파일명을 분석하는 가짜 로직(Mock Logic) 기반 웹 대시보드 구현.
-- 상태: "아직 뇌가 비어있음 (Untrained)" - 판단 능력 없음.
+##### 2026.02.24 (3일차) #####
+브랜치 통합 및 프로젝트 상태 단일화
+- 목표: 산재된 작업 브랜치를 `main`으로 통합하여 최신 기능 및 수정 사항을 한데 모음.
+- 주요 진행 상황:
+    - [x] `feature/lib-refactoring` 통합: V-SAMS를 라이브러리 패키지(`vsams/`) 구조로 개조한 사항을 `main`에 최종 확인 및 반영.
+    - [x] `fix/recovery-metal-hairline` 병합: 최신(2026-02-24) 문서 수정 및 금속 헤어라인 복구 관련 사항을 병합 완료.
+    - [x] 구조 정리: `integration_pipeline.py`를 `examples/integration_example.py`로 이동하여 예제 코드로 분리.
+- 상태: 모든 기능 브랜치가 `main`으로 성공적으로 통합됨. 로컬 및 리모트 브랜치 간의 정합성 확보 완료.
 
----
+##### 2026.02.12 (2일차) #####
+오픈 데이터셋 부트스트래핑 및 초기 학습 파이프라인 검증
+- 목표: 물리적 실험 데이터가 없는 상황에서 오픈 데이터셋을 활용해 학습 파이프라인 전체를 가동하고 모델의 동작 확인.
+- 주요 진행 상황:
+    - 데이터 부트스트래핑: DTD(Describable Textures Dataset)를 자동으로 다운로드하고 V-SAMS 레이블 체계(Rough, Hairline, Glossy, Pattern)에 맞게 샘플링하여 배치하는 utils/download_datasets.py 작성 및 실행 완료.
+    - 환경 구축: M2 Pro 환경에 최적화된 Python 가상 환경(venv) 생성 및 torch, timm, albumentations 등 필수 종속성 설치 완료.
+    - 파이프라인 검증: 샘플링된 60장의 이미지를 사용하여 train.py를 실행, ResNet50 기반 Multi-Head 모델의 학습 루프가 정상적으로 동작함을 확인 (Loss 감소 확인 및 checkpoints/v_sams_model.pth 생성 완료).
+- 현재 상태: 실제 데이터를 수입할 준비가 끝났으며, 모델이 가상 데이터를 통해 기본적인 판단 로직을 형성하기 시작함.
+    - UI 연동 완료: 학습된 체크포인트(PTH) 파일을 app.py에서 자동으로 로드하여 실제 추론을 수행하도록 연결함. 이 과정에서 Apple M2 Pro 유니파이드 메모리 환경에 최적화된 MPS 가속 로직을 적용함.
+    - 버그 수정: RGBA 형식의 이미지 업로드 시 PyTorch 정규화 과정에서 발생하던 채널 불일치 에러(RuntimeError)를 해결하기 위해 입력 이미지의 RGB 강제 변환 로직을 추가함.
+    - 대규모 데이터셋 학습 개시: 기존 60장의 샘플 데이터를 넘어 MINC(재질) 및 DTD(텍스처) 전체 데이터셋(약 3GB)을 확보하고 학습에 투입함. Metal, Plastic 등 핵심 재질 인식 능력을 갖추기 위해 클래스당 수백 장 규모의 데이터를 매핑함. 이를 통해 실제 산업용 피착제 이미지 분석의 신뢰도를 대폭 향상시킬 예정임.
+    - 학습 완료: MPS(Metal Performance Shaders) 가속을 사용하여 5640장의 이미지에 대한 5 Epoch 학습을 성공적으로 마침. 최종 Loss는 0.2507로, 초기 더미 모델(Loss 1.5) 대비 비약적인 성능 향상을 확인함. 이제 V-SAMS는 Metal, Plastic 등 다양한 재질과 Hairline, Rough 등 미세 패턴을 구분할 수 있는 능력을 갖춤.
+    - 데이터 매핑 오류 수정 및 통합: Hugging Face Parquet 포맷의 MINC 데이터를 올바르게 파싱하도록 스크립트를 수정하여 재질별(Metal, Plastic, Wood 등) 이미지를 정확히 분리 추출함. 총 7,440장의 통합 데이터셋으로 2차 재학습을 수행하였으며(Loss 0.4060), 이를 통해 'Other' 편향 문제를 해결하고 실제 금속/플라스틱 구분이 가능해짐.
+    - One-Shot Learning 적용: 데이터셋 구조 상 Metal과 Hairline 조합의 부재로 인해 특정 이미지를 'Other'로 오인하는 문제가 발생함. 이를 해결하기 위해 문제의 이미지(pre-buff-1.png)를 'Metal_Hairline' 클래스로 강제 지정하고 30회 증강(Augmentation) 복제하여 학습 데이터에 포함시킴. 3차 재학습 결과 Loss 0.3958을 기록하며 해당 클래스에 대한 인지 능력을 확보함.
 
-##### (1일차) 2026.01.14 #####
-"발사대(Launchpad)" 정비 및 통합 파이프라인 준비
+##### 2026.01.14 (1.5일차) #####
+Launchpad 완성 및 핵심 엔진 연결
+
+- Code Audit 결과 반영 (견고성 확인):
+    - Feature Extraction 모드: 단순 분류를 넘어 2048차원 벡터 추출을 통해 홀딩 파워 예측(Regression)을 위한 핵심 입력값 확보.
+    - 실전형 Data Pipeline: Albumentations 증강 및 폴더 구조 자동 파싱으로 데이터만 넣으면 즉시 학습 가능한 상태.
+    - 현장 맞춤형 Labeler: 파일명 Hash 처리 및 타임스탬프 고도화로 Windows/한글 환경에서의 충돌 원천 차단.
+
+- Action Item 완료:
+    - Integration Pipeline 연결: `integration_pipeline.py` 가 DeepDrop-SFE의 실제 모듈(`src/ai_engine`, `src/physics_engine`)을 Import하도록 연결.
+    - Mock 상태를 벗어나 실제 엔진과 물리 연산 모듈을 호출하는 구조로 변경 (Import 실패 시 Fallback 유지).
+
+##### 2026.01.14 (1일차) #####
+발사대(Launchpad) 정비 및 통합 파이프라인 준비
 - 목표: 연구소에서 데이터를 받는 즉시 최적의 성능으로 학습하고, 다른 모듈(DeepDrop)과 통합될 수 있도록 코드를 실전 배치용으로 업그레이드.
 - 주요 진행 상황:
     - [x] V-SAMS 모델 개조: 
@@ -29,32 +53,13 @@
     - [x] 최상위 통합 컨트롤러 설계:
         - V-SAMS, DeepDrop, 물성 데이터를 융합하는 `integration_pipeline.py` 골격 작성 완료.
 - 현재 시점: 1월 28일 회의를 위한 '발사대(Launchpad)' 정비 완료. 데이터 수집 즉시 학습 및 통합 분석 가능.
-
----
-
-##### (1.5일차) 2026.01.14 (추가 업데이트) #####
-"Launchpad 완성 및 핵심 엔진 연결"
-
-- Code Audit 결과 반영 (견고성 확인):
-    - Feature Extraction 모드: 단순 분류를 넘어 2048차원 벡터 추출을 통해 홀딩 파워 예측(Regression)을 위한 핵심 입력값 확보.
-    - 실전형 Data Pipeline: Albumentations 증강 및 폴더 구조 자동 파싱으로 데이터만 넣으면 즉시 학습 가능한 상태.
-    - 현장 맞춤형 Labeler: 파일명 Hash 처리 및 타임스탬프 고도화로 Windows/한글 환경에서의 충돌 원천 차단.
-
-- Action Item 완료:
-    - Integration Pipeline 연결: `integration_pipeline.py` 가 DeepDrop-SFE의 실제 모듈(`src/ai_engine`, `src/physics_engine`)을 Import하도록 연결.
-    - Mock 상태를 벗어나 실제 엔진과 물리 연산 모듈을 호출하는 구조로 변경 (Import 실패 시 Fallback 유지).
     
-##### (2일차) 2026.02.12 #####
-오픈 데이터셋 부트스트래핑 및 초기 학습 파이프라인 검증
-- 목표: 물리적 실험 데이터가 없는 상황에서 오픈 데이터셋을 활용해 학습 파이프라인 전체를 가동하고 모델의 동작 확인.
-- 주요 진행 상황:
-    - 데이터 부트스트래핑: DTD(Describable Textures Dataset)를 자동으로 다운로드하고 V-SAMS 레이블 체계(Rough, Hairline, Glossy, Pattern)에 맞게 샘플링하여 배치하는 utils/download_datasets.py 작성 및 실행 완료.
-    - 환경 구축: M2 Pro 환경에 최적화된 Python 가상 환경(venv) 생성 및 torch, timm, albumentations 등 필수 종속성 설치 완료.
-    - 파이프라인 검증: 샘플링된 60장의 이미지를 사용하여 train.py를 실행, ResNet50 기반 Multi-Head 모델의 학습 루프가 정상적으로 동작함을 확인 (Loss 감소 확인 및 checkpoints/v_sams_model.pth 생성 완료).
-- 현재 상태: 실제 데이터를 수입할 준비가 끝났으며, 모델이 가상 데이터를 통해 기본적인 판단 로직을 형성하기 시작함.
-    - UI 연동 완료: 학습된 체크포인트(PTH) 파일을 app.py에서 자동으로 로드하여 실제 추론을 수행하도록 연결함. 이 과정에서 Apple M2 Pro 유니파이드 메모리 환경에 최적화된 MPS 가속 로직을 적용함.
-    - 버그 수정: RGBA 형식의 이미지 업로드 시 PyTorch 정규화 과정에서 발생하던 채널 불일치 에러(RuntimeError)를 해결하기 위해 입력 이미지의 RGB 강제 변환 로직을 추가함.
-    - 대규모 데이터셋 학습 개시: 기존 60장의 샘플 데이터를 넘어 MINC(재질) 및 DTD(텍스처) 전체 데이터셋(약 3GB)을 확보하고 학습에 투입함. Metal, Plastic 등 핵심 재질 인식 능력을 갖추기 위해 클래스당 수백 장 규모의 데이터를 매핑함. 이를 통해 실제 산업용 피착제 이미지 분석의 신뢰도를 대폭 향상시킬 예정임.
-    - 학습 완료: MPS(Metal Performance Shaders) 가속을 사용하여 5640장의 이미지에 대한 5 Epoch 학습을 성공적으로 마침. 최종 Loss는 0.2507로, 초기 더미 모델(Loss 1.5) 대비 비약적인 성능 향상을 확인함. 이제 V-SAMS는 Metal, Plastic 등 다양한 재질과 Hairline, Rough 등 미세 패턴을 구분할 수 있는 능력을 갖춤.
-    - 데이터 매핑 오류 수정 및 통합: Hugging Face Parquet 포맷의 MINC 데이터를 올바르게 파싱하도록 스크립트를 수정하여 재질별(Metal, Plastic, Wood 등) 이미지를 정확히 분리 추출함. 총 7,440장의 통합 데이터셋으로 2차 재학습을 수행하였으며(Loss 0.4060), 이를 통해 'Other' 편향 문제를 해결하고 실제 금속/플라스틱 구분이 가능해짐.
-    - One-Shot Learning 적용: 데이터셋 구조 상 Metal과 Hairline 조합의 부재로 인해 특정 이미지를 'Other'로 오인하는 문제가 발생함. 이를 해결하기 위해 문제의 이미지(pre-buff-1.png)를 'Metal_Hairline' 클래스로 강제 지정하고 30회 증강(Augmentation) 복제하여 학습 데이터에 포함시킴. 3차 재학습 결과 Loss 0.3958을 기록하며 해당 클래스에 대한 인지 능력을 확보함.
+##### 2026.01.04 (0일차) #####
+- 목표: 서비스의 뼈대(Skeleton)를 만들고 로직의 흐름을 시뮬레이션 가능하게 함.
+- 주요 내용:
+    - Project 구조 설계 및 기본 환경 설정 (`requirements.txt`).
+    - `models/classifier.py`: ResNet50 백본과 Multi-Head 구조 구현 (초기 버전).
+    - `train.py`: DummyDataset을 이용한 학습 루프 시뮬레이션 구축.
+    - `labeler.py`: Streamlit을 활용한 기본적인 데이터 수집 도구 작성.
+    - `app.py`: 실제 모델 대신 파일명을 분석하는 가짜 로직(Mock Logic) 기반 웹 대시보드 구현.
+- 상태: "아직 뇌가 비어있음 (Untrained)" - 판단 능력 없음.
