@@ -9,8 +9,16 @@ setup(
         "numpy",
         "pandas",
         "torch",
-        "torchvision"
-        # Add other dependencies from requirements.txt if needed
+        "torchvision",
+        "timm",
+        "albumentations",
+        "fastapi",
+        "uvicorn",
+        "pillow",
+        "scikit-learn",
+        "requests",
+        "tqdm",
+        "huggingface_hub"
     ],
     author="V-SAMS Team",
     description="Visual-based Surface Analysis & Matching System",
