@@ -3,6 +3,7 @@ torchvision
 timm
 streamlit
 albumentations
+opencv-python-headless
 fastapi
 uvicorn
 wandb
