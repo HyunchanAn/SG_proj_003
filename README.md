@@ -61,11 +61,12 @@ V-SAMS는 산업용 제품(피착제)의 사진을 분석하여 모재의 종류
 ```bash
 python -m streamlit run app.py
 ```
-* 사용자 모드 (User Demo): 사진을 업로드하고 AI 분석 및 추천 결과를 확인합니다. 
-* **모델 가중치**: 실제 모델 추론을 위해 `checkpoints/v_sams_model.pth` 파일이 필요합니다.
+* 사용자 모드 (User Demo): 사진을 업로드하고 AI 분석 결과를 확인합니다. 
+* **모델 가중치 (중요)**: 
+  - 현재 저장소는 대용량 파일 관리를 위한 **Git LFS**가 설정되어 있으나, 환경에 따라 설치되지 않았을 수 있습니다.
+  - 실제 모델 추론을 위해 `checkpoints/v_sams_model.pth` 파일이 필요합니다.
+  - 만약 Git을 통해 모델이 다운로드되지 않았다면, 아래 구글 드라이브 링크에서 직접 다운로드하여 `checkpoints/` 폴더에 넣어주세요.
   - [모델 가중치 다운로드 (Google Drive)](https://drive.google.com/drive/folders/17-op2rcLvMz-KStfAKlgOstsW3lj_Q2C?usp=sharing)
-  - 가중치 파일이 있을 경우 실제 모델 추론을 수행하며, 없을 경우 시뮬레이션 모드로 동작합니다.
-  - 본 저장소는 Git LFS를 통해 가중치 파일을 관리합니다.
 
 ### 2. 데이터 라벨링 툴 (Labeling Tool)
 AI 학습용 데이터를 쉽고 빠르게 수집/관리하기 위한 도구입니다.

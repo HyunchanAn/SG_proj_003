@@ -61,9 +61,9 @@ else:
     st.error(load_msg)
 
 # --- Prediction Logic ---
-def predict(image, image_name):
+def predict_multiple(images, image_names):
     """
-    학습된 모델이 있으면 실제 추론을 수행하고, 없으면 시뮬레이션 엔진을 가동합니다.
+    여러 장의 이미지를 분석하여 종합적인 결과를 도출합니다.
     """
     if load_status == "real":
         from torchvision import transforms
@@ -74,288 +74,222 @@ def predict(image, image_name):
         ])
         
         device = next(model_obj.parameters()).device
-        input_tensor = preprocess(image).unsqueeze(0).to(device)
         
-        with torch.no_grad():
-            mat_logits, fin_logits = model_obj(input_tensor)
-            mat_probs = torch.softmax(mat_logits, dim=1)[0]
-            fin_probs = torch.softmax(fin_logits, dim=1)[0]
-            
+        all_mat_probs = []
+        all_fin_probs = []
+        
+        for img in images:
+            input_tensor = preprocess(img).unsqueeze(0).to(device)
+            with torch.no_grad():
+                mat_logits, fin_logits = model_obj(input_tensor)
+                all_mat_probs.append(torch.softmax(mat_logits, dim=1)[0])
+                all_fin_probs.append(torch.softmax(fin_logits, dim=1)[0])
+        
+        # 확률 평균 계산 (Ensemble)
+        avg_mat_probs = torch.stack(all_mat_probs).mean(dim=0)
+        avg_fin_probs = torch.stack(all_fin_probs).mean(dim=0)
+        
         MATERIALS = ["Metal", "Plastic", "Glass", "Painted", "Wood", "Other"]
         FINISHES = ["Mirror", "Rough", "Hairline", "Matte", "Glossy", "Pattern", "Other"]
         
-        mat_idx = torch.argmax(mat_probs).item()
-        fin_idx = torch.argmax(fin_probs).item()
+        mat_idx = torch.argmax(avg_mat_probs).item()
+        fin_idx = torch.argmax(avg_fin_probs).item()
         
         return {
             "Material": MATERIALS[mat_idx],
             "Finish": FINISHES[fin_idx],
             "Scores": {
-                MATERIALS[mat_idx]: mat_probs[mat_idx].item(),
-                FINISHES[fin_idx]: fin_probs[fin_idx].item()
+                MATERIALS[mat_idx]: avg_mat_probs[mat_idx].item(),
+                FINISHES[fin_idx]: avg_fin_probs[fin_idx].item()
             }
         }
     
     # Simulation logic (Mock)
-    time.sleep(1.0) 
-    image_name = image_name.lower()
-    
-    if "mirror" in image_name or "shiny" in image_name or "101" in image_name:
-        return {"Material": "Metal", "Finish": "Mirror", "Scores": {"Metal": 0.92, "Mirror": 0.95}}
-    elif "rough" in image_name or "sandblast" in image_name or "305" in image_name:
-        return {"Material": "Metal", "Finish": "Rough", "Scores": {"Metal": 0.88, "Rough": 0.91}}
-    elif "paint" in image_name or "glossy" in image_name or "500" in image_name:
-        return {"Material": "Painted", "Finish": "Glossy", "Scores": {"Painted": 0.94, "Glossy": 0.89}}
+    time.sleep(1.0)
+    # 갯수에 상관없이 첫 번째 파일명 기반으로 간단히 시뮬레이션
+    name = image_names[0].lower()
+    if "mirror" in name or "ba" in name or "sm" in name:
+        return {"Material": "Metal", "Finish": "Mirror", "Scores": {"Metal": 0.95, "Mirror": 0.98}}
+    elif "hl" in name or "hairline" in name:
+        return {"Material": "Metal", "Finish": "Hairline", "Scores": {"Metal": 0.92, "Hairline": 0.94}}
+    elif "rough" in name or "4" in name:
+        return {"Material": "Metal", "Finish": "Pattern", "Scores": {"Metal": 0.88, "Pattern": 0.85}}
     else:
-        # 가상 데이터셋에서 학습된 초기 패턴 대응
-        return {"Material": "Other", "Finish": "Mirror", "Scores": {"Other": 0.60, "Mirror": 0.55}}
+        return {"Material": "Other", "Finish": "Other", "Scores": {"Other": 0.50, "Other": 0.50}}
+
+def get_substrate_type(material, finish):
+    """
+    AI 분류 결과를 현장 용어로 맵핑합니다 (Based on 260410 memo.txt).
+    """
+    mapping = {
+        ("Metal", "Mirror"): "Sus (BA/SM) / High-gloss Steel",
+        ("Metal", "Hairline"): "Sus (HL / Hairline)",
+        ("Metal", "Pattern"): "Sus (#4) / Patterned Metal",
+        ("Metal", "Rough"): "Rough Metal / Sandblast",
+        ("Metal", "Matte"): "Matte Color Steel",
+        ("Painted", "Glossy"): "Glossy Color Steel",
+        ("Painted", "Matte"): "Matte/Ultra-matte Color Steel",
+    }
+    return mapping.get((material, finish), f"{material} ({finish})")
 
 # --- Language Config ---
 LANG_DICT = {
     "English": {
-        "title": "🛡️ V-SAMS",
-        "subtitle": "**Visual-based Surface Analysis & Matching System** (Proprietary Demo)",
-        "sidebar_header": "Upload Environment",
-        "upload_label": "Upload Product Image",
-        "upload_tip": "💡 Tip: Try uploading images of metal or plastic surfaces.",
+        "title": "🛡️ V-SAMS Analysis Hub",
+        "subtitle": "**Multi-View Surface Analysis System** (Prototype)",
+        "sidebar_header": "Setup",
+        "upload_label": "Upload Surface Images (Max 5)",
+        "upload_tip": "💡 Tip: Upload multiple angles for better accuracy.",
         "debug_checkbox": "Show Debug Info",
-        "img_acq": "1. Image Acquisition",
-        "img_caption": "Preprocessed Input",
-        "ai_analysis": "2. AI Analysis Result",
-        "analyzing": "Analyzing Texture & Material...",
+        "img_acq": "1. Multi-View Acquisition",
+        "img_caption": "Input Photo",
+        "ai_analysis": "2. Integrated AI Analysis",
+        "analyzing": "Synthesizing multi-view data...",
         "success": "Analysis Complete",
-        "det_material": "Detected Material",
-        "det_finish": "Detected Finish",
+        "det_material": "Material Group",
+        "det_finish": "Surface Finish",
+        "det_substrate": "Identified Substrate (Field Term)",
         "mat_conf": "Material Confidence",
         "finish_conf": "Texture Confidence",
-        "recommendation": "3. Intelligent Recommendation",
-        "best_match": "### ✨ Best Match",
-        "desc_label": "**Description:**",
-        "specs_label": "#### Specs",
-        "report_btn": "📄 Generate Report",
-        "no_match": "No perfect match found in current database.",
-        "welcome_title": "### Welcome to V-SAMS Demo",
+        "recommendation": "3. Decision Output",
+        "best_match": "### 🔍 Surface Identification Result",
+        "welcome_title": "### Welcome to V-SAMS Multi-View Demo",
         "welcome_msg": """
-        This system analyzes surface properties to recommend protective films.
+        This system analyzes surface properties from multiple photos to identify specific industrial substrates.
         
         **Workflow:**
-        1.  **Upload** a photo of the implementation material.
-        2.  **AI** identifies Material Type and Surface Finish.
-        3.  **System** matches the best Protective Film from the database.
+        1.  **Upload** 1 to 5 photos of the material (different angles recommended).
+        2.  **AI Engine** synthesizes all views to identify Material and Finish.
+        3.  **Result** outputs the professional substrate name (e.g., Sus BA, HL).
         """,
         "mode_select": "Select Mode",
-        "mode_user": "User Demo",
-        "mode_admin": "DB Management",
-        "admin_title": "🔧 Database Management",
-        "add_section": "Add New Product",
-        "p_id": "Product ID (e.g., PF-900)",
-        "p_name": "Product Name",
-        "p_desc": "Description",
-        "p_base": "Base Material (e.g., PET, PE)",
-        "p_adh": "Adhesive Type (e.g., Silicone)",
-        "p_tack": "Tack Force (e.g., 50 gf/25mm)",
-        "tgt_mat": "Target Materials",
-        "tgt_fin": "Target Finishes",
-        "save_btn": "💾 Save Product",
-        "saved_msg": "✅ Product saved successfully to database!"
+        "mode_user": "Analysis Demo",
+        "mode_admin": "Developer Info"
     },
     "Korean": {
-        "title": "🛡️ V-SAMS",
-        "subtitle": "**시각 기반 표면 분석 및 보호필름 매칭 시스템** (Proprietary Demo)",
+        "title": "🛡️ V-SAMS 분석 허브",
+        "subtitle": "**다각도 표면 분석 시스템** (Prototype)",
         "sidebar_header": "환경 설정",
-        "upload_label": "제품 이미지 업로드",
-        "upload_tip": "💡 팁: 금속이나 플라스틱 표면 사진을 업로드해보세요.",
+        "upload_label": "이미지 업로드 (최대 5장)",
+        "upload_tip": "💡 팁: 여러 각도의 사진을 올리면 정확도가 높아집니다.",
         "debug_checkbox": "디버그 정보 표시",
-        "img_acq": "1. 이미지 획득 (Image Acquisition)",
-        "img_caption": "전처리된 입력 이미지",
-        "ai_analysis": "2. AI 분석 결과 (AI Analysis)",
-        "analyzing": "텍스처 및 재질 분석 중...",
+        "img_acq": "1. 다각도 이미지 획득",
+        "img_caption": "입력 이미지",
+        "ai_analysis": "2. 통합 AI 분석 결과",
+        "analyzing": "모든 각도의 데이터를 종합 분석 중...",
         "success": "분석 완료",
-        "det_material": "감지된 재질",
-        "det_finish": "감지된 마감",
+        "det_material": "재질 그룹",
+        "det_finish": "표면 마감",
+        "det_substrate": "식별된 표면 종류 (현장 용어)",
         "mat_conf": "재질 신뢰도",
         "finish_conf": "텍스처 신뢰도",
-        "recommendation": "3. 지능형 제품 추천 (Recommendation)",
-        "best_match": "### ✨ 최적 매칭 제품",
-        "desc_label": "**제품 설명:**",
-        "specs_label": "#### 상세 스펙",
-        "report_btn": "📄 리포트 생성",
-        "no_match": "현재 데이터베이스에서 완벽하게 일치하는 제품을 찾을 수 없습니다.",
-        "welcome_title": "### V-SAMS 데모에 오신 것을 환영합니다",
+        "recommendation": "3. 최종 판단 결과",
+        "best_match": "### 🔍 표면 종류 식별 결과",
+        "welcome_title": "### V-SAMS 다각도 데모에 오신 것을 환영합니다",
         "welcome_msg": """
-        이 시스템은 표면 특성을 분석하여 최적의 보호 필름을 추천합니다.
+        이 시스템은 여러 장의 사진을 종합 분석하여 실제 현장에서 사용하는 표면 종류를 식별합니다.
         
         **워크플로우:**
-        1.  **업로드**: 피착제(제품)의 사진을 업로드합니다.
-        2.  **AI 분석**: 인공지능이 재질 종류와 표면 마감 상태를 식별합니다.
-        3.  **추천**: 데이터베이스에서 가장 적합한 보호 필름을 매칭합니다.
+        1.  **업로드**: 피착제 사진을 1~5장까지 업로드합니다 (다양한 각도 권장).
+        2.  **AI 통합 분석**: 업로드된 모든 사진을 종합하여 재질과 마감을 판단합니다.
+        3.  **결과 출력**: 식별된 표면의 현장 용어(예: Sus BA, HL 등)를 출력합니다.
         """,
         "mode_select": "모드 선택",
-        "mode_user": "사용자 데모",
-        "mode_admin": "DB 관리 도구",
-        "admin_title": "🔧 데이터베이스 관리",
-        "add_section": "신규 제품 등록",
-        "p_id": "제품 ID (예: PF-900)",
-        "p_name": "제품명",
-        "p_desc": "설명",
-        "p_base": "기재 (Base Material)",
-        "p_adh": "점착제 (Adhesive)",
-        "p_tack": "점착력 (Tack Force)",
-        "tgt_mat": "타겟 재질 (복수 선택)",
-        "tgt_fin": "타겟 마감 (복수 선택)",
-        "save_btn": "💾 제품 저장",
-        "saved_msg": "✅ 제품이 데이터베이스에 저장되었습니다!"
+        "mode_user": "분석 데모",
+        "mode_admin": "개발 정보"
     }
 }
 
 # --- UI Layout ---
 with st.sidebar:
-    # Language Toggle
     lang_code = st.radio("Language / 언어", ["English", "Korean"], index=1)
     txt = LANG_DICT[lang_code]
-    
     st.divider()
-    
-    # Mode Toggle
     mode = st.radio(txt["mode_select"], [txt["mode_user"], txt["mode_admin"]])
-    
     st.divider()
     
     if mode == txt["mode_user"]:
         st.header(txt["sidebar_header"])
-        uploaded_file = st.file_uploader(txt["upload_label"], type=['jpg', 'png', 'jpeg'])
+        uploaded_files = st.file_uploader(txt["upload_label"], type=['jpg', 'png', 'jpeg'], accept_multiple_files=True)
+        if uploaded_files and len(uploaded_files) > 5:
+            st.warning("Max 5 files allowed. Only the first 5 will be processed.")
+            uploaded_files = uploaded_files[:5]
         st.info(txt["upload_tip"])
         
         if st.checkbox(txt["debug_checkbox"]):
-            st.write("System Status: Online")
-            st.write("Model: ResNet50-DualHead")
-            st.write("Database: v1.0 (JSON)")
+            st.write(f"Loaded Files: {len(uploaded_files) if uploaded_files else 0}")
+            st.write("Device: MPS" if torch.backends.mps.is_available() else "Device: CPU")
 
 # User Mode UI
 if mode == txt["mode_user"]:
     st.title(txt["title"])
     st.markdown(txt["subtitle"])
 
-    col1, col2 = st.columns([1, 1])
+    if uploaded_files:
+        # 1. Display Images in Carousel-like Grid
+        st.subheader(txt["img_acq"])
+        cols = st.columns(len(uploaded_files))
+        processed_images = []
+        file_names = []
+        
+        for i, file in enumerate(uploaded_files):
+            img = Image.open(file).convert("RGB")
+            processed_images.append(img)
+            file_names.append(file.name)
+            with cols[i]:
+                st.image(img, caption=f"{txt['img_caption']} {i+1}", use_container_width=True)
+            
+        st.divider()
 
-    if uploaded_file is not None:
-        # 1. Display Image
-        # RGBA 이미지가 업로드될 경우 정규화 과정에서 채널 수 불일치 에러가 발생하므로 RGB로 변환
-        image = Image.open(uploaded_file).convert("RGB")
+        # 2. Integrated AI Analysis
+        st.subheader(txt["ai_analysis"])
+        with st.spinner(txt["analyzing"]):
+            result = predict_multiple(processed_images, file_names)
+        
+        st.success(txt["success"])
+        
+        # Mapping to Field Term
+        substrate_name = get_substrate_type(result['Material'], result['Finish'])
+        
+        col1, col2 = st.columns([1, 1])
         with col1:
-            st.subheader(txt["img_acq"])
-            st.image(image, caption=txt["img_caption"], use_container_width=True)
+            st.metric(txt["det_material"], result['Material'])
+            st.progress(result['Scores'][result['Material']], text=f"{txt['mat_conf']}")
             
-        # 2. AI Analysis
         with col2:
-            st.subheader(txt["ai_analysis"])
-            
-            with st.spinner(txt["analyzing"]):
-                result = predict(image, uploaded_file.name)
-            
-            # Visualize Confidence
-            st.success(txt["success"])
-            
-            m_col, f_col = st.columns(2)
-            with m_col:
-                st.metric(txt["det_material"], result['Material'], f"{result['Scores'][result['Material']]*100:.1f}%")
-            with f_col:
-                st.metric(txt["det_finish"], result['Finish'], f"{result['Scores'][result['Finish']]*100:.1f}%")
-                
-            st.progress(result['Scores'][result['Material']], text=f"{txt['mat_conf']}: {result['Material']}")
-            st.progress(result['Scores'][result['Finish']], text=f"{txt['finish_conf']}: {result['Finish']}")
+            st.metric(txt["det_finish"], result['Finish'])
+            st.progress(result['Scores'][result['Finish']], text=f"{txt['finish_conf']}")
 
         st.divider()
 
-        # 3. Recommendation
+        # 3. Final Decision Result
         st.header(txt["recommendation"])
+        st.markdown(f"{txt['best_match']}")
+        st.info(f"✨ **{substrate_name}**")
         
-        recommendations = query_recommendation(result['Material'], result['Finish'])
-        
-        if recommendations:
-            best_match = recommendations[0]
-            st.markdown(f"{txt['best_match']}: {best_match['name']}")
+        # Additional Field Context based on Substrate
+        if "Sus" in substrate_name:
+            st.write("💡 *Sus surfaces require careful adhesive selection based on gloss levels (BA/SM).*")
+        elif "Color Steel" in substrate_name:
+            st.write("💡 *Coated surfaces may have variable surface energy; check matte/gloss levels.*")
             
-            rec_col1, rec_col2 = st.columns([1, 2])
-            
-            # Product Image (Mock)
-            with rec_col1:
-                # Try to load mock product image if exists
-                img_path = best_match.get('image_url', '')
-                if os.path.exists(img_path):
-                    st.image(img_path, width=200)
-                else:
-                    st.markdown("Easy-to-peel Protection")
-            
-            with rec_col2:
-                st.markdown(f"{txt['desc_label']} {best_match['description']}")
-                st.markdown(txt["specs_label"])
-                st.json(best_match['specs'])
-                
-                st.button(txt["report_btn"])
-        else:
-            st.warning(txt["no_match"])
-
     else:
-        # Welcome Screen
         st.markdown(txt["welcome_title"])
         st.markdown(txt["welcome_msg"])
 
-# Admin Mode UI
+# Admin/Dev Info
 else:
-    st.title(txt["admin_title"])
-    
-    # 1. Product List (Read-only view)
-    st.subheader("Current Database")
-    current_db = load_db()
-    if current_db:
-        st.dataframe(current_db) # Simple Table View
+    st.title(txt["mode_admin"])
+    st.subheader("System Architecture")
+    st.write("- Model: ResNet50 Dual-Head Classifier")
+    st.write("- Feature Extraction: 2048-dim vectors")
+    st.write("- Ensemble Method: Logit/Probability Averaging")
+    st.write("- Optimized for: Apple M2 Pro (MPS)")
     
     st.divider()
-    
-    # 2. Add New Product Form
-    with st.form("product_form"):
-        st.subheader(txt["add_section"])
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            p_id = st.text_input(txt["p_id"])
-            p_name = st.text_input(txt["p_name"])
-            p_base = st.text_input(txt["p_base"])
-        with col2:
-            p_desc = st.text_input(txt["p_desc"])
-            p_adh = st.text_input(txt["p_adh"])
-            p_tack = st.text_input(txt["p_tack"])
-            
-        params_mat = st.multiselect(txt["tgt_mat"], ["Metal", "Plastic", "Glass", "Painted"])
-        params_fin = st.multiselect(txt["tgt_fin"], ["Mirror", "Rough", "Glossy", "Matte", "Hairline", "Sandblast"])
-        
-        submitted = st.form_submit_button(txt["save_btn"])
-        
-        if submitted:
-            if not p_id or not p_name:
-                st.error("ID and Name are required!")
-            else:
-                new_product = {
-                    "id": p_id,
-                    "name": p_name,
-                    "description": p_desc,
-                    "specs": {
-                        "base_material": p_base,
-                        "adhesive": p_adh,
-                        "tack_force": p_tack
-                    },
-                    "target_condition": {
-                        "material_category": params_mat,
-                        "finish_type": params_fin,
-                        "risk_residue": "Medium"
-                    },
-                    "image_url": "images/placeholder.png"
-                }
-                
-                current_db.append(new_product)
-                save_db(current_db)
-                st.success(txt["saved_msg"])
-                time.sleep(1)
-                st.rerun()
+    st.subheader("Raw Prediction Mapping Targets")
+    st.json({
+        "Materials": ["Metal", "Plastic", "Glass", "Painted", "Wood", "Other"],
+        "Finishes": ["Mirror", "Rough", "Hairline", "Matte", "Glossy", "Pattern", "Other"]
+    })
 
