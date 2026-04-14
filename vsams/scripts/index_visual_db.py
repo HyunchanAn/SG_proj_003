@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from PIL import Image
 from tqdm import tqdm
-from segment_anything import sam_model_registry, SamPredictor
+from mobile_sam import sam_model_registry, SamPredictor
 from vsams.models.classifier import SurfaceClassifier
 from torchvision import transforms
 
@@ -13,9 +13,9 @@ def index_dataset(dataset_root='dataset/260414', output_path='vsams/data/visual_
     # 1. Setup Models
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # SAM vit_l
-    sam_checkpoint = "checkpoints/sam_vit_l_0b3195.pth"
-    model_type = "vit_l"
+    # MobileSAM (vit_t)
+    sam_checkpoint = "checkpoints/mobile_sam.pt"
+    model_type = "vit_t"
     sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
     sam.to(device=device)
     predictor = SamPredictor(sam)

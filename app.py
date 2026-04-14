@@ -6,7 +6,7 @@ import time
 import cv2
 import numpy as np
 import pandas as pd
-from segment_anything import sam_model_registry, SamPredictor
+from mobile_sam import sam_model_registry, SamPredictor
 from vsams.models.classifier import SurfaceClassifier
 from vsams.utils.db_handler import query_recommendation
 from vsams.utils.substrate_db import SubstrateDB
@@ -72,24 +72,25 @@ def get_db():
 # Load SAM Model (Cached)
 @st.cache_resource
 def load_sam():
-    checkpoint = "checkpoints/sam_vit_l_0b3195.pth"
-    sam_url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth"
-    model_type = "vit_l"
+    checkpoint = "checkpoints/mobile_sam.pt"
+    # MobileSAM direct link from Hugging Face
+    sam_url = "https://huggingface.co/spaces/abidlabs/MobileSAM/resolve/main/mobile_sam.pt"
+    model_type = "vit_t"
     
     if not os.path.exists(checkpoint):
-        # Try to download SAM (it's a direct link, so requests works)
+        # Try to download MobileSAM (~40MB)
         success = download_file(sam_url, checkpoint)
         if not success:
-            return None, "SAM checkpoint missing and download failed"
+            return None, "MobileSAM checkpoint missing and download failed"
     
     try:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         sam = sam_model_registry[model_type](checkpoint=checkpoint)
         sam.to(device=device)
         predictor = SamPredictor(sam)
-        return predictor, "SAM Loaded"
+        return predictor, "MobileSAM Loaded"
     except Exception as e:
-        return None, f"Error loading SAM: {e}"
+        return None, f"Error loading MobileSAM: {e}"
 
 # Remove top-level call to prevent startup timeout
 # sam_predictor, sam_msg = load_sam()

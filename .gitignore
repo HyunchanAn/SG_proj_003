@@ -30,7 +30,7 @@ venv/
 *.pth
 !checkpoints/v_sams_model.pth
 !vsams/data/visual_library.pth
-!checkpoints/sam_vit_l_0b3195.pth
+!checkpoints/mobile_sam.pt
 
 # Streamlit
 .streamlit/
