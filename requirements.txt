@@ -14,3 +14,5 @@ scikit-learn
 requests
 tqdm
 huggingface_hub
+openpyxl
+segment-anything @ git+https://github.com/facebookresearch/segment-anything.git

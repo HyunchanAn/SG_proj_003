@@ -3,13 +3,13 @@ import torch
 import os
 from PIL import Image
 import time
+import cv2
+import numpy as np
+import pandas as pd
+from segment_anything import sam_model_registry, SamPredictor
 from vsams.models.classifier import SurfaceClassifier
-from vsams.utils.db_handler import query_recommendation, load_db, save_db
-
-# ... (Existing Language Dict - omitted for brevity in replacement, but I need to make sure I don't delete it.
-# Actually, I should probably append the Admin strings to the dictionary first or handle it inline if it's easier.
-# Let's verify where line 7 is first.
-
+from vsams.utils.db_handler import query_recommendation
+from vsams.utils.substrate_db import SubstrateDB
 
 # --- Config & Setup ---
 st.set_page_config(
@@ -18,7 +18,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Load Model (Cached)
 # Load Model (Cached)
 @st.cache_resource
 def load_model():
@@ -30,11 +29,7 @@ def load_model():
     
     if os.path.exists(checkpoint_path):
         try:
-            # MacBook Pro M2 Pro (Apple Silicon) MPS 가동
-            if torch.backends.mps.is_available():
-                device = torch.device("mps")
-            else:
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             state_dict = torch.load(checkpoint_path, map_location=device)
             model.load_state_dict(state_dict)
             model.to(device)
@@ -51,20 +46,87 @@ def load_model():
     return model, msg, status
 
 model_obj, load_msg, load_status = load_model()
+substrate_db = SubstrateDB()
 
-# UI 상단에 로드 상태 표시
-if load_status == "real":
-    st.toast(load_msg)
-elif load_status == "mock":
-    st.toast(load_msg)
-else:
-    st.error(load_msg)
+# Load SAM Model (Cached)
+@st.cache_resource
+def load_sam():
+    checkpoint = "checkpoints/sam_vit_l_0b3195.pth"
+    model_type = "vit_l"
+    if not os.path.exists(checkpoint):
+        return None, "SAM checkpoint not found"
+    
+    try:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        sam = sam_model_registry[model_type](checkpoint=checkpoint)
+        sam.to(device=device)
+        predictor = SamPredictor(sam)
+        return predictor, "SAM Loaded"
+    except Exception as e:
+        return None, f"Error loading SAM: {e}"
+
+sam_predictor, sam_msg = load_sam()
+
+# --- Property Estimation Engine ---
+def estimate_properties(images):
+    roughness_scores = []
+    gloss_scores = []
+    
+    for img in images:
+        open_cv_image = np.array(img)
+        open_cv_image = open_cv_image[:, :, ::-1].copy()
+        gray = cv2.cvtColor(open_cv_image, cv2.COLOR_BGR2GRAY)
+        
+        # Roughness (Ra)
+        sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+        sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+        mag = np.sqrt(sobelx**2 + sobely**2)
+        edge_density = np.mean(mag)
+        ra_est = 0.3 + (edge_density / 50.0) * 0.5 
+        ra_est = float(np.clip(ra_est, 0.3, 1.0))
+        roughness_scores.append(ra_est)
+        
+        # Glossiness (%)
+        contrast = gray.std()
+        avg_bright = gray.mean()
+        gloss_est = 10.0 + (contrast / 80.0) * 30.0
+        if avg_bright < 40 or avg_bright > 220:
+             gloss_est *= 0.8
+        gloss_est = float(np.clip(gloss_est, 5.0, 50.0))
+        gloss_scores.append(gloss_est)
+        
+    return np.mean(roughness_scores), np.mean(gloss_scores)
 
 # --- Prediction Logic ---
-def predict_multiple(images, image_names):
-    """
-    여러 장의 이미지를 분석하여 종합적인 결과를 도출합니다.
-    """
+def run_sam_masking(images):
+    if sam_predictor is None:
+        return images
+    
+    masked_images = []
+    for img in images:
+        cv_img = np.array(img)
+        cv_img = cv_img[:, :, ::-1].copy()
+        h, w, _ = cv_img.shape
+        sam_predictor.set_image(cv_img)
+        input_point = np.array([[w // 2, h // 2]])
+        input_label = np.array([1])
+        masks, _, _ = sam_predictor.predict(input_point, input_label, multimask_output=False)
+        mask = masks[0]
+        masked_img = cv_img.copy()
+        masked_img[~mask] = 0
+        y_indices, x_indices = np.where(mask)
+        if len(y_indices) > 0:
+            y1, y2, x1, x2 = y_indices.min(), y_indices.max(), x_indices.min(), x_indices.max()
+            masked_img = masked_img[y1:y2, x1:x2]
+        masked_img = masked_img[:, :, ::-1].copy()
+        masked_images.append(Image.fromarray(masked_img))
+    return masked_images
+
+def predict_multiple(images, image_names, use_sam=False):
+    processed_for_ai = images
+    if use_sam and sam_predictor:
+        processed_for_ai = run_sam_masking(images)
+
     if load_status == "real":
         from torchvision import transforms
         preprocess = transforms.Compose([
@@ -72,11 +134,11 @@ def predict_multiple(images, image_names):
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ])
-        
         device = next(model_obj.parameters()).device
         
         all_mat_probs = []
         all_fin_probs = []
+        all_features = []
         
         for img in images:
             input_tensor = preprocess(img).unsqueeze(0).to(device)
@@ -85,211 +147,179 @@ def predict_multiple(images, image_names):
                 all_mat_probs.append(torch.softmax(mat_logits, dim=1)[0])
                 all_fin_probs.append(torch.softmax(fin_logits, dim=1)[0])
         
-        # 확률 평균 계산 (Ensemble)
+        for img in processed_for_ai:
+            input_tensor = preprocess(img).unsqueeze(0).to(device)
+            with torch.no_grad():
+                feat = model_obj.extract_features(input_tensor)
+                all_features.append(feat.cpu().numpy().flatten())
+        
         avg_mat_probs = torch.stack(all_mat_probs).mean(dim=0)
         avg_fin_probs = torch.stack(all_fin_probs).mean(dim=0)
+        avg_features = np.mean(all_features, axis=0)
         
         MATERIALS = ["Metal", "Plastic", "Glass", "Painted", "Wood", "Other"]
         FINISHES = ["Mirror", "Rough", "Hairline", "Matte", "Glossy", "Pattern", "Other"]
-        
         mat_idx = torch.argmax(avg_mat_probs).item()
         fin_idx = torch.argmax(avg_fin_probs).item()
+        
+        est_ra, est_gloss = estimate_properties(images)
+        visual_matches = substrate_db.find_visual_match(avg_features, k=10)
+        property_matches = substrate_db.find_closest_top_k(est_ra, est_gloss, k=10)
+        
+        # Hybrid Scoring
+        scored_results = []
+        vis_dict = {m['product_name']: m['similarity'] for m in visual_matches} if visual_matches else {}
+        prop_dict = {m['product_name']: m['distance'] for m in property_matches} if property_matches else {}
+        all_products = set(vis_dict.keys()) | set(prop_dict.keys())
+        
+        for p in all_products:
+            v_score = vis_dict.get(p, 0.0)
+            p_dist = prop_dict.get(p, 10.0)
+            p_score = 1.0 / (1.0 + p_dist)
+            hybrid_score = (v_score * 0.6) + (p_score * 0.4)
+            scored_results.append({
+                'product_name': p,
+                'hybrid_score': hybrid_score,
+                'visual_score': v_score,
+                'property_score': p_score,
+                'property_dist': p_dist
+            })
+        
+        scored_results = sorted(scored_results, key=lambda x: x['hybrid_score'], reverse=True)
+        final_winner = scored_results[0] if scored_results else None
         
         return {
             "Material": MATERIALS[mat_idx],
             "Finish": FINISHES[fin_idx],
-            "Scores": {
-                MATERIALS[mat_idx]: avg_mat_probs[mat_idx].item(),
-                FINISHES[fin_idx]: avg_fin_probs[fin_idx].item()
-            }
+            "Est_Roughness": est_ra,
+            "Est_Gloss": est_gloss,
+            "Final_Winner": final_winner,
+            "Visual_Matches": visual_matches,
+            "Property_Matches": property_matches,
+            "Hybrid_Scores": scored_results[:5],
+            "Processed_Images": processed_for_ai,
+            "Scores": {MATERIALS[mat_idx]: avg_mat_probs[mat_idx].item(), FINISHES[fin_idx]: avg_fin_probs[fin_idx].item()}
         }
     
-    # Simulation logic (Mock)
-    time.sleep(1.0)
-    # 갯수에 상관없이 첫 번째 파일명 기반으로 간단히 시뮬레이션
-    name = image_names[0].lower()
-    if "mirror" in name or "ba" in name or "sm" in name:
-        return {"Material": "Metal", "Finish": "Mirror", "Scores": {"Metal": 0.95, "Mirror": 0.98}}
-    elif "hl" in name or "hairline" in name:
-        return {"Material": "Metal", "Finish": "Hairline", "Scores": {"Metal": 0.92, "Hairline": 0.94}}
-    elif "rough" in name or "4" in name:
-        return {"Material": "Metal", "Finish": "Pattern", "Scores": {"Metal": 0.88, "Pattern": 0.85}}
-    else:
-        return {"Material": "Other", "Finish": "Other", "Scores": {"Other": 0.50, "Other": 0.50}}
-
-def get_substrate_type(material, finish):
-    """
-    AI 분류 결과를 현장 용어로 맵핑합니다 (Based on 260410 memo.txt).
-    """
-    mapping = {
-        ("Metal", "Mirror"): "Sus (BA/SM) / High-gloss Steel",
-        ("Metal", "Hairline"): "Sus (HL / Hairline)",
-        ("Metal", "Pattern"): "Sus (#4) / Patterned Metal",
-        ("Metal", "Rough"): "Rough Metal / Sandblast",
-        ("Metal", "Matte"): "Matte Color Steel",
-        ("Painted", "Glossy"): "Glossy Color Steel",
-        ("Painted", "Matte"): "Matte/Ultra-matte Color Steel",
-    }
-    return mapping.get((material, finish), f"{material} ({finish})")
+    return {"Material": "Other", "Finish": "Other", "Est_Roughness": 0.5, "Est_Gloss": 20.0}
 
 # --- Language Config ---
 LANG_DICT = {
-    "English": {
-        "title": "🛡️ V-SAMS Analysis Hub",
-        "subtitle": "**Multi-View Surface Analysis System** (Prototype)",
-        "sidebar_header": "Setup",
-        "upload_label": "Upload Surface Images (Max 5)",
-        "upload_tip": "💡 Tip: Upload multiple angles for better accuracy.",
-        "debug_checkbox": "Show Debug Info",
-        "img_acq": "1. Multi-View Acquisition",
-        "img_caption": "Input Photo",
-        "ai_analysis": "2. Integrated AI Analysis",
-        "analyzing": "Synthesizing multi-view data...",
-        "success": "Analysis Complete",
-        "det_material": "Material Group",
-        "det_finish": "Surface Finish",
-        "det_substrate": "Identified Substrate (Field Term)",
-        "mat_conf": "Material Confidence",
-        "finish_conf": "Texture Confidence",
-        "recommendation": "3. Decision Output",
-        "best_match": "### 🔍 Surface Identification Result",
-        "welcome_title": "### Welcome to V-SAMS Multi-View Demo",
-        "welcome_msg": """
-        This system analyzes surface properties from multiple photos to identify specific industrial substrates.
-        
-        **Workflow:**
-        1.  **Upload** 1 to 5 photos of the material (different angles recommended).
-        2.  **AI Engine** synthesizes all views to identify Material and Finish.
-        3.  **Result** outputs the professional substrate name (e.g., Sus BA, HL).
-        """,
-        "mode_select": "Select Mode",
-        "mode_user": "Analysis Demo",
-        "mode_admin": "Developer Info"
-    },
     "Korean": {
-        "title": "🛡️ V-SAMS 분석 허브",
-        "subtitle": "**다각도 표면 분석 시스템** (Prototype)",
-        "sidebar_header": "환경 설정",
+        "title": "🛡️ V-SAMS 통합 분석 허브",
+        "subtitle": "다각도 표면 분석 및 지능형 제품 식별 시스템",
+        "sidebar_header": "분석 설정",
         "upload_label": "이미지 업로드 (최대 5장)",
-        "upload_tip": "💡 팁: 여러 각도의 사진을 올리면 정확도가 높아집니다.",
-        "debug_checkbox": "디버그 정보 표시",
-        "img_acq": "1. 다각도 이미지 획득",
-        "img_caption": "입력 이미지",
-        "ai_analysis": "2. 통합 AI 분석 결과",
-        "analyzing": "모든 각도의 데이터를 종합 분석 중...",
-        "success": "분석 완료",
-        "det_material": "재질 그룹",
-        "det_finish": "표면 마감",
-        "det_substrate": "식별된 표면 종류 (현장 용어)",
-        "mat_conf": "재질 신뢰도",
-        "finish_conf": "텍스처 신뢰도",
-        "recommendation": "3. 최종 판단 결과",
-        "best_match": "### 🔍 표면 종류 식별 결과",
-        "welcome_title": "### V-SAMS 다각도 데모에 오신 것을 환영합니다",
-        "welcome_msg": """
-        이 시스템은 여러 장의 사진을 종합 분석하여 실제 현장에서 사용하는 표면 종류를 식별합니다.
-        
-        **워크플로우:**
-        1.  **업로드**: 피착제 사진을 1~5장까지 업로드합니다 (다양한 각도 권장).
-        2.  **AI 통합 분석**: 업로드된 모든 사진을 종합하여 재질과 마감을 판단합니다.
-        3.  **결과 출력**: 식별된 표면의 현장 용어(예: Sus BA, HL 등)를 출력합니다.
-        """,
-        "mode_select": "모드 선택",
-        "mode_user": "분석 데모",
-        "mode_admin": "개발 정보"
+        "upload_tip": "💡 팁: 여러 각도의 표면 사진을 업로드하면 정확도가 향상됩니다.",
+        "debug_checkbox": "상세 분석 로그 표시",
+        "img_acq": "1. 다각도 이미지 수집",
+        "ai_analysis": "2. AI 통합 분석 및 물성 추정",
+        "analyzing": "데이터 종합 분석 및 식별 중...",
+        "success": "분석이 완료되었습니다.",
+        "recommendation": "3. 최종 제품 식별 및 정밀 분석 결과",
     }
 }
 
 # --- UI Layout ---
 with st.sidebar:
-    lang_code = st.radio("Language / 언어", ["English", "Korean"], index=1)
-    txt = LANG_DICT[lang_code]
-    st.divider()
-    mode = st.radio(txt["mode_select"], [txt["mode_user"], txt["mode_admin"]])
-    st.divider()
+    txt = LANG_DICT["Korean"]
+    st.header(txt["sidebar_header"])
+    uploaded_files = st.file_uploader(txt["upload_label"], type=['jpg', 'png', 'jpeg'], accept_multiple_files=True)
+    if uploaded_files and len(uploaded_files) > 5:
+        st.warning("최대 5장까지만 처리가 가능합니다.")
+        uploaded_files = uploaded_files[:5]
+    st.info(txt["upload_tip"])
+    use_sam = st.toggle("SAM 정밀 마스킹 활성화", value=True)
+    if use_sam and not sam_predictor:
+        st.error("SAM 모델을 로드할 수 없습니다.")
     
-    if mode == txt["mode_user"]:
-        st.header(txt["sidebar_header"])
-        uploaded_files = st.file_uploader(txt["upload_label"], type=['jpg', 'png', 'jpeg'], accept_multiple_files=True)
-        if uploaded_files and len(uploaded_files) > 5:
-            st.warning("Max 5 files allowed. Only the first 5 will be processed.")
-            uploaded_files = uploaded_files[:5]
-        st.info(txt["upload_tip"])
-        
-        if st.checkbox(txt["debug_checkbox"]):
-            st.write(f"Loaded Files: {len(uploaded_files) if uploaded_files else 0}")
-            st.write("Device: MPS" if torch.backends.mps.is_available() else "Device: CPU")
-
-# User Mode UI
-if mode == txt["mode_user"]:
-    st.title(txt["title"])
-    st.markdown(txt["subtitle"])
-
-    if uploaded_files:
-        # 1. Display Images in Carousel-like Grid
-        st.subheader(txt["img_acq"])
-        cols = st.columns(len(uploaded_files))
-        processed_images = []
-        file_names = []
-        
-        for i, file in enumerate(uploaded_files):
-            img = Image.open(file).convert("RGB")
-            processed_images.append(img)
-            file_names.append(file.name)
-            with cols[i]:
-                st.image(img, caption=f"{txt['img_caption']} {i+1}", use_container_width=True)
-            
-        st.divider()
-
-        # 2. Integrated AI Analysis
-        st.subheader(txt["ai_analysis"])
-        with st.spinner(txt["analyzing"]):
-            result = predict_multiple(processed_images, file_names)
-        
-        st.success(txt["success"])
-        
-        # Mapping to Field Term
-        substrate_name = get_substrate_type(result['Material'], result['Finish'])
-        
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            st.metric(txt["det_material"], result['Material'])
-            st.progress(result['Scores'][result['Material']], text=f"{txt['mat_conf']}")
-            
-        with col2:
-            st.metric(txt["det_finish"], result['Finish'])
-            st.progress(result['Scores'][result['Finish']], text=f"{txt['finish_conf']}")
-
-        st.divider()
-
-        # 3. Final Decision Result
-        st.header(txt["recommendation"])
-        st.markdown(f"{txt['best_match']}")
-        st.info(f"✨ **{substrate_name}**")
-        
-        # Additional Field Context based on Substrate
-        if "Sus" in substrate_name:
-            st.write("💡 *Sus surfaces require careful adhesive selection based on gloss levels (BA/SM).*")
-        elif "Color Steel" in substrate_name:
-            st.write("💡 *Coated surfaces may have variable surface energy; check matte/gloss levels.*")
-            
+    # Library Load Status
+    if substrate_db.visual_library is not None:
+        st.sidebar.success(f"📚 Visual Library Loaded ({len(substrate_db.visual_library)} items)")
     else:
-        st.markdown(txt["welcome_title"])
-        st.markdown(txt["welcome_msg"])
+        st.sidebar.error("❌ Visual Library NOT Loaded")
+        
+    show_debug = st.checkbox(txt["debug_checkbox"])
 
-# Admin/Dev Info
-else:
-    st.title(txt["mode_admin"])
-    st.subheader("System Architecture")
-    st.write("- Model: ResNet50 Dual-Head Classifier")
-    st.write("- Feature Extraction: 2048-dim vectors")
-    st.write("- Ensemble Method: Logit/Probability Averaging")
-    st.write("- Optimized for: Apple M2 Pro (MPS)")
+st.title(txt["title"])
+st.markdown(txt["subtitle"])
+
+if uploaded_files:
+    st.subheader(txt["img_acq"])
+    cols = st.columns(len(uploaded_files))
+    processed_images = []
+    file_names = []
+    for i, file in enumerate(uploaded_files):
+        img = Image.open(file).convert("RGB")
+        processed_images.append(img)
+        file_names.append(file.name)
+        with cols[i]:
+            st.image(img, caption=f"입력 {i+1}", use_container_width=True)
     
     st.divider()
-    st.subheader("Raw Prediction Mapping Targets")
-    st.json({
-        "Materials": ["Metal", "Plastic", "Glass", "Painted", "Wood", "Other"],
-        "Finishes": ["Mirror", "Rough", "Hairline", "Matte", "Glossy", "Pattern", "Other"]
-    })
+    st.subheader(txt["ai_analysis"])
+    with st.spinner(txt["analyzing"]):
+        result = predict_multiple(processed_images, file_names, use_sam=use_sam)
+    
+    st.success(txt["success"])
+    
+    # 3. Final Product Identification
+    st.header(txt["recommendation"])
+    winner = result.get('Final_Winner')
+    if winner:
+        w_col1, w_col2 = st.columns([1, 1])
+        with w_col1:
+            st.success(f"🏆 **최종 판정 제품**: {winner['product_name']}")
+            st.write(f"**종합 신뢰도**: {winner['hybrid_score']:.4f}")
+            st.write(f"(시각 일치율: {winner['visual_score']:.2f}, 물성 일치율: {winner['property_score']:.2f})")
+            
+            # Additional recommendation
+            recs = query_recommendation(result['Material'], result['Finish'])
+            if recs:
+                st.warning(f"📝 **추천 보호필름**: {recs[0]['name']} (및 {len(recs)-1}개 더)")
+        
+        with w_col2:
+            vis_matches = result.get('Visual_Matches', [])
+            ref_path = next((m['ref_image'] for m in vis_matches if m['product_name'] == winner['product_name']), None)
+            if ref_path and os.path.exists(ref_path):
+                st.image(Image.open(ref_path), caption=f"DB 참조 이미지: {winner['product_name']}", width=400)
+    
+    st.divider()
+    
+    # --- 🛠️ ADVANCED DEBUG DASHBOARD ---
+    st.header("🛠️ 고급 분석 대시보드 (Advanced Debug)")
+    
+    # ROI display
+    st.subheader("A. SAM 마스킹 결과 (ROI 분석)")
+    masked_imgs = result.get("Processed_Images", [])
+    if use_sam and len(masked_imgs) > 0:
+        r_cols = st.columns(len(masked_imgs))
+        for i, m_img in enumerate(masked_imgs):
+            with r_cols[i]:
+                st.image(m_img, caption=f"ROI {i+1}", use_container_width=True)
+    else:
+        st.info("SAM 마스킹이 비활성 상태이거나 실패했습니다.")
 
+    # Top-K tables
+    dcol1, dcol2 = st.columns(2)
+    with dcol1:
+        st.subheader("B. 시각적 유사도 TOP 5")
+        v_matches = result.get('Visual_Matches', [])
+        if v_matches:
+            st.table(pd.DataFrame(v_matches)[['product_name', 'similarity']].head(5))
+            
+    with dcol2:
+        st.subheader("C. 물성치 유사도 TOP 5")
+        p_matches = result.get('Property_Matches', [])
+        if p_matches:
+            st.table(pd.DataFrame(p_matches)[['product_name', 'distance', 'roughness', 'gloss']].head(5))
+
+    # Raw metrics
+    st.subheader("D. 엔진 원천 지표")
+    mcol1, mcol2, mcol3 = st.columns(3)
+    mcol1.metric("추정 조도 (Ra)", f"{result['Est_Roughness']:.4f}")
+    mcol2.metric("추정 광택도 (%)", f"{result['Est_Gloss']:.2f}")
+    mcol3.metric("AI 분류 (Material/Finish)", f"{result['Material']} / {result['Finish']}")
+
+else:
+    st.info("상단 설정창에서 이미지를 업로드하여 분석을 시작하세요.")
