@@ -266,8 +266,7 @@ with st.sidebar:
         uploaded_files = uploaded_files[:5]
     st.info(txt["upload_tip"])
     use_sam = st.toggle("SAM 정밀 마스킹 활성화", value=True)
-    if use_sam and not sam_predictor:
-        st.error("SAM 모델을 로드할 수 없습니다.")
+    # Removing direct check for sam_predictor to avoid NameError before lazy loading
     
     # Library Status (Lazy Load check)
     db_obj = get_db()
