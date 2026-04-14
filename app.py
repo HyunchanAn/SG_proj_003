@@ -18,29 +18,47 @@ st.set_page_config(
     layout="wide"
 )
 
+import requests
+
+def download_file(url, save_path):
+    """Downloads a file with a progress bar if needed, or simply via requests."""
+    if not os.path.exists(os.path.dirname(save_path)):
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    
+    with st.spinner(f"Downloading {os.path.basename(save_path)}..."):
+        response = requests.get(url, stream=True)
+        if response.status_code == 200:
+            with open(save_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return True
+    return False
+
 # Load Model (Cached)
 @st.cache_resource
 def load_model():
     checkpoint_path = 'checkpoints/v_sams_model.pth'
+    # Source URL from README/Previous context
+    model_url = "https://drive.google.com/uc?id=17-op2rcLvMz-KStfAKlgOstsW3lj_Q2C" # This might need gdown or alternate direct link
+    
     model = SurfaceClassifier(num_materials=6, num_finishes=7)
     
-    msg = ""
-    status = "mock"
-    
-    if os.path.exists(checkpoint_path):
+    if not os.path.exists(checkpoint_path):
+        # We try to skip auto-download for the main model if it's too big/complex for direct GDrive link without gdown
+        # But for now, we'll mark it as MOCK if missing.
+        msg = "메인 모델 파일 없음 (MOCK 모드)"
+        status = "mock"
+    else:
         try:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             state_dict = torch.load(checkpoint_path, map_location=device)
             model.load_state_dict(state_dict)
             model.to(device)
-            msg = f"실제 AI 모델 가동 중 (분석 장치: {device})"
+            msg = f"실제 AI 모델 가동 중 ({device})"
             status = "real"
         except Exception as e:
-            msg = f"모델 가중치 로드 실패: {e}"
+            msg = f"로드 실패: {e}"
             status = "error"
-    else:
-        msg = "모델 파일 없음 (MOCK 시뮬레이션 모드)"
-        status = "mock"
     
     model.eval()
     return model, msg, status
@@ -52,9 +70,14 @@ substrate_db = SubstrateDB()
 @st.cache_resource
 def load_sam():
     checkpoint = "checkpoints/sam_vit_l_0b3195.pth"
+    sam_url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth"
     model_type = "vit_l"
+    
     if not os.path.exists(checkpoint):
-        return None, "SAM checkpoint not found"
+        # Try to download SAM (it's a direct link, so requests works)
+        success = download_file(sam_url, checkpoint)
+        if not success:
+            return None, "SAM checkpoint missing and download failed"
     
     try:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
