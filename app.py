@@ -63,8 +63,11 @@ def load_model():
     model.eval()
     return model, msg, status
 
-model_obj, load_msg, load_status = load_model()
-substrate_db = SubstrateDB()
+# substrate_db = SubstrateDB() # Keep this or move to lazy? 
+# Actually, SubstrateDB loads a small Excel and 4MB .pth, which is fast. But let's be safe.
+@st.cache_resource
+def get_db():
+    return SubstrateDB()
 
 # Load SAM Model (Cached)
 @st.cache_resource
@@ -88,7 +91,8 @@ def load_sam():
     except Exception as e:
         return None, f"Error loading SAM: {e}"
 
-sam_predictor, sam_msg = load_sam()
+# Remove top-level call to prevent startup timeout
+# sam_predictor, sam_msg = load_sam()
 
 # --- Property Estimation Engine ---
 def estimate_properties(images):
@@ -121,7 +125,7 @@ def estimate_properties(images):
     return np.mean(roughness_scores), np.mean(gloss_scores)
 
 # --- Prediction Logic ---
-def run_sam_masking(images):
+def run_sam_masking(images, sam_predictor):
     if sam_predictor is None:
         return images
     
@@ -146,9 +150,18 @@ def run_sam_masking(images):
     return masked_images
 
 def predict_multiple(images, image_names, use_sam=False):
+    """
+    여러 장의 이미지를 분석하여 종합적인 결과를 도출합니다.
+    """
+    # Lazy load models to prevent Streamlit health check timeout
+    model_obj, load_msg, load_status = load_model()
+    substrate_db = get_db()
+    
     processed_for_ai = images
-    if use_sam and sam_predictor:
-        processed_for_ai = run_sam_masking(images)
+    if use_sam:
+        sam_predictor, sam_msg = load_sam()
+        if sam_predictor:
+            processed_for_ai = run_sam_masking(images, sam_predictor)
 
     if load_status == "real":
         from torchvision import transforms
@@ -256,9 +269,10 @@ with st.sidebar:
     if use_sam and not sam_predictor:
         st.error("SAM 모델을 로드할 수 없습니다.")
     
-    # Library Load Status
-    if substrate_db.visual_library is not None:
-        st.sidebar.success(f"📚 Visual Library Loaded ({len(substrate_db.visual_library)} items)")
+    # Library Status (Lazy Load check)
+    db_obj = get_db()
+    if db_obj.visual_library is not None:
+        st.sidebar.success(f"📚 Visual Library Loaded ({len(db_obj.visual_library)} items)")
     else:
         st.sidebar.error("❌ Visual Library NOT Loaded")
         
