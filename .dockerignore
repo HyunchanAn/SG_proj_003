@@ -1,0 +1,15 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.streamlit
+dataset
+dtd
+minc-2500
+scratch
+test_images
+*.tar.gz

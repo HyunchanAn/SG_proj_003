@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vsams"
+version = "0.1.0"
+description = "Visual-based Surface Analysis & Matching System"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "albumentations",
+    "fastapi",
+    "huggingface_hub",
+    "numpy",
+    "openpyxl",
+    "opencv-python-headless",
+    "pandas",
+    "pillow",
+    "requests",
+    "scikit-learn",
+    "streamlit",
+    "timm",
+    "torch",
+    "torchvision",
+    "tqdm",
+    "uvicorn",
+    "wandb",
+    "mobile-sam @ git+https://github.com/ChaoningZhang/MobileSAM.git",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["vsams*"]
+
+[tool.setuptools.package-data]
+vsams = ["data/*.json", "data/*.pth", "data/*.xlsx"]

@@ -1,0 +1,2 @@
+include README.md
+recursive-include vsams/data *.json *.pth *.xlsx

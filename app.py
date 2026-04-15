@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from mobile_sam import sam_model_registry, SamPredictor
 from vsams.models.classifier import SurfaceClassifier
+from vsams.paths import checkpoint_path
 from vsams.utils.db_handler import query_recommendation
 from vsams.utils.substrate_db import SubstrateDB
 
@@ -37,13 +38,13 @@ def download_file(url, save_path):
 # Load Model (Cached)
 @st.cache_resource
 def load_model():
-    checkpoint_path = 'checkpoints/v_sams_model.pth'
+    model_checkpoint_path = checkpoint_path("v_sams_model.pth")
     # Source URL from README/Previous context
     model_url = "https://drive.google.com/uc?id=17-op2rcLvMz-KStfAKlgOstsW3lj_Q2C" # This might need gdown or alternate direct link
     
     model = SurfaceClassifier(num_materials=6, num_finishes=7)
     
-    if not os.path.exists(checkpoint_path):
+    if not model_checkpoint_path.exists():
         # We try to skip auto-download for the main model if it's too big/complex for direct GDrive link without gdown
         # But for now, we'll mark it as MOCK if missing.
         msg = "메인 모델 파일 없음 (MOCK 모드)"
@@ -51,7 +52,7 @@ def load_model():
     else:
         try:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            state_dict = torch.load(checkpoint_path, map_location=device)
+            state_dict = torch.load(model_checkpoint_path, map_location=device)
             model.load_state_dict(state_dict)
             model.to(device)
             msg = f"실제 AI 모델 가동 중 ({device})"
@@ -72,12 +73,12 @@ def get_db():
 # Load SAM Model (Cached)
 @st.cache_resource
 def load_sam():
-    checkpoint = "checkpoints/mobile_sam.pt"
+    checkpoint = checkpoint_path("mobile_sam.pt")
     # MobileSAM direct link from Hugging Face
     sam_url = "https://huggingface.co/spaces/abidlabs/MobileSAM/resolve/main/mobile_sam.pt"
     model_type = "vit_t"
     
-    if not os.path.exists(checkpoint):
+    if not checkpoint.exists():
         # Try to download MobileSAM (~40MB)
         success = download_file(sam_url, checkpoint)
         if not success:
@@ -85,7 +86,7 @@ def load_sam():
     
     try:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        sam = sam_model_registry[model_type](checkpoint=checkpoint)
+        sam = sam_model_registry[model_type](checkpoint=str(checkpoint))
         sam.to(device=device)
         predictor = SamPredictor(sam)
         return predictor, "MobileSAM Loaded"
