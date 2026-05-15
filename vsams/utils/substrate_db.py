@@ -7,15 +7,17 @@ from vsams.paths import DATA_DIR
 
 
 class SubstrateDB:
-    def __init__(self, excel_path=None):
+    def __init__(self, excel_path=None, visual_library_path=None):
         if excel_path is None:
             excel_path = DATA_DIR / "substrate_properties.xlsx"
+        if visual_library_path is None:
+            visual_library_path = DATA_DIR / "visual_library.pth"
 
         self.excel_path = Path(excel_path).resolve()
         self.df = None
         self.visual_library = None
         self.load_db()
-        self.load_visual_library(DATA_DIR / "visual_library.pth")
+        self.load_visual_library(visual_library_path)
 
     def load_db(self):
         if not self.excel_path.exists():

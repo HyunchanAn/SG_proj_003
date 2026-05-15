@@ -27,7 +27,10 @@ def make_dummy_db() -> SubstrateDB:
     excel_path를 존재하지 않는 경로로 설정하여 파일 로딩 로직을 우회한 뒤,
     df를 직접 교체합니다.
     """
-    db = SubstrateDB(excel_path="__non_existent_path_for_testing__.xlsx")
+    db = SubstrateDB(
+        excel_path="__non_existent_path_for_testing__.xlsx",
+        visual_library_path="__non_existent_library__.pth"
+    )
 
     # 더미 제품 데이터 주입
     data = {
@@ -45,12 +48,18 @@ class TestSubstrateDBInit:
 
     def test_init_with_missing_file_does_not_raise(self):
         """존재하지 않는 경로를 주면 예외 없이 초기화되어야 합니다."""
-        db = SubstrateDB(excel_path="__totally_fake_path__.xlsx")
+        db = SubstrateDB(
+            excel_path="__totally_fake_path__.xlsx",
+            visual_library_path="__totally_fake_library__.pth"
+        )
         assert db.df is None
 
     def test_visual_library_none_on_missing_pth(self):
         """visual_library.pth 미존재 시 visual_library가 None이어야 합니다."""
-        db = SubstrateDB(excel_path="__totally_fake_path__.xlsx")
+        db = SubstrateDB(
+            excel_path="__totally_fake_path__.xlsx",
+            visual_library_path="__totally_fake_library__.pth"
+        )
         assert db.visual_library is None
 
 
@@ -59,7 +68,10 @@ class TestFindClosest:
 
     def test_returns_none_when_df_is_none(self):
         """df가 None이면 None을 반환해야 합니다."""
-        db = SubstrateDB(excel_path="__fake__.xlsx")
+        db = SubstrateDB(
+            excel_path="__fake__.xlsx",
+            visual_library_path="__fake_lib__.pth"
+        )
         result = db.find_closest(0.5, 20.0)
         assert result is None
 
@@ -93,7 +105,10 @@ class TestFindClosestTopK:
 
     def test_returns_empty_list_when_df_is_none(self):
         """df가 None이면 빈 리스트를 반환해야 합니다."""
-        db = SubstrateDB(excel_path="__fake__.xlsx")
+        db = SubstrateDB(
+            excel_path="__fake__.xlsx",
+            visual_library_path="__fake_lib__.pth"
+        )
         result = db.find_closest_top_k(0.5, 20.0, k=3)
         assert result == []
 

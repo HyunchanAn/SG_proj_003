@@ -1,142 +1,38 @@
-# V-SAMS: 시각 기반 표면 분석 및 매칭 시스템 (Visual-based Surface Analysis & Matching System)
+# V-SAMS (Surface Analysis & Measurement System)
 
-## 개요 (Overview)
-V-SAMS는 산업용 제품(피착제)의 사진을 분석하여 모재의 종류와 표면 마감 상태를 식별하는 지능형 시스템입니다. 분석된 표면 특성(표면 에너지, 거칠기 등)을 바탕으로 최적의 보호 필름을 자동으로 추천합니다.
+V-SAMS는 산업용 스테인리스강의 표면 마감 상태를 동전 반사 원리를 활용해 정밀 분석하는 물리 기반 측정 엔진입니다.
 
-핵심 기능:
-- **하이브리드 식별 엔진**: 시각적 특징과 물리적 물성(조도, 광택도)을 결합하여 가중치 기반의 정밀 제품 식별을 수행합니다.
-- **SAM 기반 정밀 분석**: Segment Anything Model(`vit_l`)을 연동하여 이미지 배경 노이즈를 제거하고 피착제 영역만 정밀 마스킹하여 분석 신뢰도를 극대화합니다.
-- **실시간 디버그 대시보드**: 분석 결과의 원천 지표(ROI, 유사도 순위, 추정 물성치)를 한 화면에서 모두 확인 가능한 진단 도구를 제공합니다.
-- **비주얼 레퍼런스 매칭**: 400여 장의 실물 참조 사진을 기반으로 업로드한 샘플과 가장 유사한 실제 제품명을 식별하고 매칭 사진을 즉시 출력합니다.
-- 라이브러리 독립성: 타 파이썬 프로젝트나 AI 파이프라인에 즉시 통합 가능한 패키지 구조(`vsams`)를 유지합니다.
+## 핵심 기능
+
+1. 지능형 ROI 자동 탐지
+- CLAHE 전처리 및 질감 분석 알고리즘을 통한 실시간 동전 위치 추적
+- 이미지 중앙 가중치 적용으로 조명 반사 등 주변 노이즈와 실제 객체 완벽 구분
+
+2. 물리 기반 정밀 분석 엔진
+- 가변 블러링(Adaptive Blurring) 기술을 활용해 표면 결(Grain) 노이즈를 제거하고 반사된 상의 선명도만 추출
+- 조도(Ra)와 광택도(Gloss) 수치를 정량화하여 산업 표준 마감(SM, BA, HL, #4) 자동 분류
+
+3. 사용자 중심 인터페이스
+- 이미지 업로드 시 별도의 조작 없이 즉시 분석 결과를 도출하는 Zero-Click UX 구현
+- 분석에 사용된 동전 및 반사광 영역의 크롭 이미지를 실시간으로 제공하여 신뢰도 확인 가능
 
 ## 기술 스택 (Tech Stack)
-- AI Core: PyTorch, timm (ResNet50), Albumentations
-- App/UI: Streamlit (빠른 프로토타이핑)
-- Backend: Python (FastAPI 호환 구조)
-- Data: 전이 학습(Transfer Learning)을 위해 MINC(재질) 및 DTD(텍스처) 오픈 데이터셋 활용
-> **Note**: 본 프로젝트는 주로 **금속 표면(Metal Surface)**의 미세 패턴(헤어라인, 샌드블라스트 등) 식별에 최적화되어 있습니다.
+- Engine: Python, OpenCV (Image Processing)
+- UI: Streamlit
+- Data: 산업용 금속 피착제(BA, SM, HL, #4 등) 23종의 물성치 DB 연동
 
-## AI 분석 능력 (AI Capabilities)
-현재 V-SAMS는 **6가지 재질(Material)**과 **7가지 마감(Finish)**을 구분할 수 있도록 설계되었습니다. 특히 **금속(Metal)** 표면에서의 마감 식별 능력은 다음과 같습니다.
-
-| 마감 종류 (Finish) | 금속 표면 인식 수준 | 비고 |
-| :--- | :--- | :--- |
-| **Hairline (헤어라인)** | ⭐⭐⭐⭐⭐ (최상) | One-Shot Learning을 통해 금속 특화 학습 완료. |
-| **Rough (거친면)** | ⭐⭐⭐⭐ (우수) | DTD 데이터셋(`pitted`, `scaly`) 기반으로 샌드블라스트 등 식별 가능. |
-| **Pattern (패턴)** | ⭐⭐⭐⭐ (우수) | 규칙적인 무늬(`grid`, `meshed`)는 기본 학습으로도 잘 식별함. |
-| **Matte (무광)** | ⭐⭐⭐ (보통) | 광택이 없는 차분한 금속 표면. Rough와 혼동될 수 있음. |
-| **Glossy (유광)** | ⭐⭐⭐ (보통) | 빛 반사가 있는 일반적인 표면. 거울면(Mirror)과 구분이 필요함. |
-| **Mirror (거울면)** | ⭐⭐ (부족) | 얼굴이 비칠 정도의 고광택(Super Mirror) 데이터가 부족하여 추가 학습 권장. |
-| **Other (기타)** | - | 위 분류에 속하지 않는 특수 마감. |
-
-* **Mirror(거울면)** 등 특정 마감의 인식률을 높이려면 해당 샘플 이미지를 `labeler.py`를 통해 추가 학습시켜야 합니다.
-
-## 설치 방법 (Installation)
-
-1. 저장소 복제 (Clone):
-   ```bash
-   git clone <repository-url>
-   cd V-SAMS
-   ```
-
-2. 가상 환경 설정 (권장):
-   ```bash
-   python -m venv venv
-   # Windows:
-   .\venv\Scripts\activate
-   # Mac/Linux:
-   source venv/bin/activate
-   ```
-
-3. 의존성 패키지 설치:
-   ```bash
-   pip install -r requirements.txt
-   pip install -e .
-   ```
-   * `pip install -e .` 명령어를 통해 `vsams` 패키지를 설치합니다. 이를 통해 프로젝트 내 어디서든 모듈을 import 할 수 있습니다.
-
-## 사용법 (Usage)
-
-### 1. 메인 데모 앱 (Prototype Demo)
-피착제 분석 및 보호필름 추천 시연을 위한 메인 애플리케이션입니다.
-```bash
-python -m streamlit run app.py
-```
-* 분석 모드 (Analysis Demo): 
-  - 사진을 **최대 5장**까지 업로드할 수 있습니다 (정면, 측면, 근접 등 권장).
-  - AI 엔진이 모든 각도의 사진을 종합 분석하여 표면 마감 상태를 정밀하게 판정합니다.
-  - 결과는 **Sus BA, HL, #4, SM** 등 실제 산업 현장에서 사용하는 명칭으로 출력됩니다.
-* **모델 가중치 (중요)**: 
-  - 현재 저장소는 대용량 파일 관리를 위한 **Git LFS**가 설정되어 있으나, 환경에 따라 설치되지 않았을 수 있습니다.
-  - 실제 모델 추론을 위해 `checkpoints/v_sams_model.pth` 파일이 필요합니다.
-  - 만약 Git을 통해 모델이 다운로드되지 않았다면, 아래 구글 드라이브 링크에서 직접 다운로드하여 `checkpoints/` 폴더에 넣어주세요.
-  - [모델 가중치 다운로드 (Google Drive)](https://drive.google.com/drive/folders/17-op2rcLvMz-KStfAKlgOstsW3lj_Q2C?usp=sharing)
-
-### 2. 데이터 라벨링 툴 (Labeling Tool)
-AI 학습용 데이터를 쉽고 빠르게 수집/관리하기 위한 도구입니다.
-```bash
-python -m streamlit run labeler.py
-```
-* 기능: 이미지를 드래그 앤 드롭으로 업로드하고, 재질/마감 속성을 선택하면 자동으로 폴더(`dataset/train/Material_Finish`)에 분류하여 저장합니다. 한글 파일명 보안 처리가 되어 있습니다.
-
-### 3. 모델 학습 (Training)
-수집된 데이터를 기반으로 모델을 학습시킵니다. 물리적 데이터가 부족한 경우, 오픈 데이터셋(MINC, DTD)을 활용하여 부트스트래핑할 수 있습니다.
-
-**데이터 부트스트래핑 (Data Bootstrapping)**:
-스크립트를 통해 다음 오픈 데이터셋을 자동으로 다운로드 및 전처리합니다.
-* **MINC-2500** (Materials in Context): Hugging Face (`mcimpoi/minc-2500_split_1`)에서 다운로드. (재질 분류용)
-* **DTD** (Describable Textures Dataset): Oxford VGG (`dtd-r1.0.1`)에서 다운로드. (텍스처 분류용)
-
-```bash
-python utils/download_datasets.py
-```
-
-**학습 실행**:
-```bash
-python train.py
-```
-* M2 Pro (Apple Silicon) MPS 가속을 자동으로 활용하여 고속 학습을 수행합니다.
-* Albumentations를 통한 데이터 증강과 Multi-task 학습을 수행합니다.
-
-### 4. 확장 예제 (Examples)
-독립 라이브러리로서 타 소프트웨어(예: 접촉각 분석 엔진 등)와 연동하는 예제 코드를 제공합니다.
-```bash
-python examples/integration_example.py
-```
-
-### 5. 라이브러리 사용 (Library Usage)
-V-SAMS는 이제 파이썬 라이브러리로 제공됩니다. 다른 프로젝트에서 다음과 같이 사용할 수 있습니다.
-
-```python
-import vsams
-from vsams.models.classifier import SurfaceClassifier
-
-# 모델 초기화
-model = SurfaceClassifier(num_materials=6, num_finishes=7)
-print(f"V-SAMS Version: {vsams.__version__}")
-```
+## 사용 방법 (Usage)
+1. `streamlit run app.py` 명령어로 메인 허브를 실행합니다.
+2. 분석할 금속 표면 사진을 업로드합니다.
+3. 캔버스에서 첫 번째 박스로 실제 동전 을, 두 번째 박스로 반사된 상 을 지정합니다.
+4. 즉시 계산된 추정 조도(Ra)와 광택도(%)를 확인하고 DB 내 유사 제품을 매칭합니다.
 
 ## 프로젝트 구조 (Project Structure)
-```text
-V-SAMS/
-├── vsams/                  # 메인 패키지 (Source Code)
-│   ├── models/             # AI 모델 아키텍처
-│   └── utils/              # DB 핸들러 및 유틸리티
-├── examples/               # 타 시스템 연동 예제
-├── app.py                  # 메인 데모 애플리케이션 (Streamlit)
-├── labeler.py              # 데이터 라벨링 도구 (Streamlit)
-├── train.py                # 학습 스크립트
-├── setup.py                # 패키지 설치 설정
-├── development_log.txt     # 프로젝트 개발 이력
-├── database.json           # 제품 정보 DB
-├── requirements.txt        # 의존성 목록
-└── README.md               # 프로젝트 설명서
-```
+- vsams/analysis/surface_evaluator.py: 핵심 물리 분석 엔진
+- vsams/utils/substrate_db.py: 제품 물성치 DB 핸들러
+- app.py: 메인 분석 허브 (Unified Hub)
+- tests/: 알고리즘 및 모듈 검증용 단위 테스트
 
-## 현재 진행 상황 (Current Status)
-이 프로젝트는 "초기 지능 확보 (Active Intelligence)" 단계입니다.
-- AI 모델: ResNet50 기반 Multi-Head 모델이 MINC-2500 및 DTD 데이터셋(약 7,400장)으로 선행 학습되었습니다.
-- 환경 최적화: Apple M2 Pro, MPS 가속 환경에서 안정적인 학습 및 추론이 가능합니다.
-- One-Shot Learning: Metal/Hairline과 같은 특정 조합 데이터 부족 문제를 해결하기 위해, 현장 데이터 증강 학습 로직이 적용되었습니다.
-- UI 연동: 학습된 모델(`v_sams_model.pth`)이 존재할 경우 자동으로 로드되어 실제 분석 결과를 제공합니다.
+## 현재 상태 (Current Status)
+- 리팩토링 완료: 레거시 PoC 코드를 제거하고 물리 알고리즘 중심으로 엔진을 단일화하였습니다.
+- 안정성 확보: 27개의 단위 테스트를 통해 코어 모듈의 무결성을 보장합니다.
