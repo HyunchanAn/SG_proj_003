@@ -16,3 +16,4 @@ tqdm
 huggingface_hub
 openpyxl
 mobile-sam @ git+https://github.com/ChaoningZhang/MobileSAM.git
+pytest
