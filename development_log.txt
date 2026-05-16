@@ -1,5 +1,14 @@
 # V-SAMS Development Log
 
+##### 2026.05.16 (9일차) #####
+저장소 브랜치 최적화 및 Main 통합
+- 브랜치 병합: feature/coin-reflection-refactor(v1.2.0)를 main 브랜치로 최종 병합 완료.
+- 저장소 정리: 머지가 완료된 기능 브랜치 및 노후된 레거시 브랜치들 삭제.
+    - 삭제된 로컬 브랜치: feature/coin-reflection-refactor, feature/multi-view-analysis
+    - 삭제된 원격 브랜치: feature/coin-reflection-refactor, feature/multi-view-analysis, feature/surface-analysis-260421
+- 상태: main 브랜치가 최신 물리 기반 엔진(v1.2.0)으로 갱신되었으며, 저장소 구조가 최적화됨.
+
+
 ##### 2026.05.15 (8일차) #####
 2026-05-15: 물리 기반 자동 분석 엔진 고도화 및 검출 로직 혁신
 - 지능형 동전 검출 시스템 도입: CLAHE 전처리, 중앙 가중치(Center-Weighted) 및 질감 분석(Texture Std Dev)을 결합하여 표면 반사 노이즈 완전 배제 성공

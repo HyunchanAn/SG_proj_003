@@ -1,5 +1,10 @@
 # V-SAMS (Surface Analysis & Measurement System)
 
+![Status](https://img.shields.io/badge/Status-v1.2.0_Stable-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.14+-blue)
+![Backend](https://img.shields.io/badge/Backend-PyTorch_/_OpenCV-orange)
+![Physics](https://img.shields.io/badge/Physics-Coin--Reflection-red)
+
 V-SAMS는 산업용 스테인리스강의 표면 마감 상태를 동전 반사 원리를 활용해 정밀 분석하는 물리 기반 측정 엔진입니다.
 
 ## 핵심 기능
