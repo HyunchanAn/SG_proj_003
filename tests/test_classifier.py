@@ -71,12 +71,14 @@ class TestSurfaceClassifierForward:
         with torch.no_grad():
             mat_logits, fin_logits = model(dummy_input)
 
-        assert mat_logits.shape == (BATCH_SIZE, DEFAULT_NUM_MATERIALS), (
-            f"Material head 출력 Shape 불일치: {mat_logits.shape}"
-        )
-        assert fin_logits.shape == (BATCH_SIZE, DEFAULT_NUM_FINISHES), (
-            f"Finish head 출력 Shape 불일치: {fin_logits.shape}"
-        )
+        assert mat_logits.shape == (
+            BATCH_SIZE,
+            DEFAULT_NUM_MATERIALS,
+        ), f"Material head 출력 Shape 불일치: {mat_logits.shape}"
+        assert fin_logits.shape == (
+            BATCH_SIZE,
+            DEFAULT_NUM_FINISHES,
+        ), f"Finish head 출력 Shape 불일치: {fin_logits.shape}"
 
     def test_output_shapes_custom_classes(self, dummy_input):
         """커스텀 클래스 수를 적용했을 때 출력 Shape이 그에 맞게 조정되는지 확인합니다."""
@@ -98,7 +100,9 @@ class TestSurfaceClassifierForward:
             features = model(dummy_input, return_features=True)
 
         # 반환값이 tuple이 아닌 단일 텐서여야 함
-        assert isinstance(features, torch.Tensor), "return_features 모드는 단일 Tensor를 반환해야 합니다."
+        assert isinstance(
+            features, torch.Tensor
+        ), "return_features 모드는 단일 Tensor를 반환해야 합니다."
         assert features.shape[0] == BATCH_SIZE
         # 두 번째 차원이 백본의 특징 차원과 일치해야 함
         assert features.shape[1] == model.num_features
@@ -119,15 +123,18 @@ class TestSurfaceClassifierFeatureExtraction:
     def test_feature_shape(self, model, dummy_input):
         """extract_features 출력의 Shape이 (batch_size, num_features)인지 확인합니다."""
         features = model.extract_features(dummy_input)
-        assert features.shape == (BATCH_SIZE, model.num_features), (
-            f"extract_features 출력 Shape 불일치: {features.shape}"
-        )
+        assert features.shape == (
+            BATCH_SIZE,
+            model.num_features,
+        ), f"extract_features 출력 Shape 불일치: {features.shape}"
 
     def test_feature_is_detached_tensor(self, model, dummy_input):
         """extract_features가 그래디언트가 없는 Tensor를 반환하는지 확인합니다."""
         features = model.extract_features(dummy_input)
         # torch.no_grad() 블록 내에서 계산되므로 grad_fn이 없어야 함
-        assert features.grad_fn is None, "extract_features 결과에 grad_fn이 있어서는 안 됩니다."
+        assert (
+            features.grad_fn is None
+        ), "extract_features 결과에 grad_fn이 있어서는 안 됩니다."
 
     def test_feature_dtype_float(self, model, dummy_input):
         """추출된 특징 벡터가 float32 타입인지 확인합니다."""

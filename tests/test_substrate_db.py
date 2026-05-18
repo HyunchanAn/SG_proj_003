@@ -16,7 +16,6 @@ SubstrateDB 클래스의 핵심 계산 로직을 검증하는 단위 테스트.
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from vsams.utils.substrate_db import SubstrateDB
 
@@ -29,7 +28,7 @@ def make_dummy_db() -> SubstrateDB:
     """
     db = SubstrateDB(
         excel_path="__non_existent_path_for_testing__.xlsx",
-        visual_library_path="__non_existent_library__.pth"
+        visual_library_path="__non_existent_library__.pth",
     )
 
     # 더미 제품 데이터 주입
@@ -50,7 +49,7 @@ class TestSubstrateDBInit:
         """존재하지 않는 경로를 주면 예외 없이 초기화되어야 합니다."""
         db = SubstrateDB(
             excel_path="__totally_fake_path__.xlsx",
-            visual_library_path="__totally_fake_library__.pth"
+            visual_library_path="__totally_fake_library__.pth",
         )
         assert db.df is None
 
@@ -58,7 +57,7 @@ class TestSubstrateDBInit:
         """visual_library.pth 미존재 시 visual_library가 None이어야 합니다."""
         db = SubstrateDB(
             excel_path="__totally_fake_path__.xlsx",
-            visual_library_path="__totally_fake_library__.pth"
+            visual_library_path="__totally_fake_library__.pth",
         )
         assert db.visual_library is None
 
@@ -69,8 +68,7 @@ class TestFindClosest:
     def test_returns_none_when_df_is_none(self):
         """df가 None이면 None을 반환해야 합니다."""
         db = SubstrateDB(
-            excel_path="__fake__.xlsx",
-            visual_library_path="__fake_lib__.pth"
+            excel_path="__fake__.xlsx", visual_library_path="__fake_lib__.pth"
         )
         result = db.find_closest(0.5, 20.0)
         assert result is None
@@ -91,12 +89,14 @@ class TestFindClosest:
         """
         db = make_dummy_db()
         result = db.find_closest(roughness=0.12, glossiness=58.0)
+        assert result is not None
         assert result["product_name"] == "Sus_SM"
 
     def test_result_contains_distance_key(self):
         """반환된 딕셔너리에 'distance' 키가 있어야 합니다."""
         db = make_dummy_db()
         result = db.find_closest(roughness=0.5, glossiness=20.0)
+        assert result is not None
         assert "distance" in result
 
 
@@ -106,8 +106,7 @@ class TestFindClosestTopK:
     def test_returns_empty_list_when_df_is_none(self):
         """df가 None이면 빈 리스트를 반환해야 합니다."""
         db = SubstrateDB(
-            excel_path="__fake__.xlsx",
-            visual_library_path="__fake_lib__.pth"
+            excel_path="__fake__.xlsx", visual_library_path="__fake_lib__.pth"
         )
         result = db.find_closest_top_k(0.5, 20.0, k=3)
         assert result == []
@@ -122,6 +121,7 @@ class TestFindClosestTopK:
         """k가 데이터 개수보다 크면 전체를 반환해야 합니다."""
         db = make_dummy_db()
         result = db.find_closest_top_k(0.5, 20.0, k=100)
+        assert db.df is not None
         assert len(result) == len(db.df)
 
     def test_results_are_sorted_by_distance_ascending(self):
@@ -129,7 +129,9 @@ class TestFindClosestTopK:
         db = make_dummy_db()
         result = db.find_closest_top_k(0.5, 20.0, k=4)
         distances = [r["distance"] for r in result]
-        assert distances == sorted(distances), "결과가 거리 오름차순으로 정렬되지 않았습니다."
+        assert distances == sorted(
+            distances
+        ), "결과가 거리 오름차순으로 정렬되지 않았습니다."
 
     def test_result_keys_are_correct(self):
         """반환된 딕셔너리 항목에 필수 키가 모두 포함되어 있어야 합니다."""
@@ -186,10 +188,15 @@ class TestFindVisualMatch:
         n_features = 64
 
         db.visual_library = [
-            {"product_name": "Sus_SM", "features": np.random.rand(3, n_features).astype(np.float32), "ref_image": "sm.jpg"},
+            {
+                "product_name": "Sus_SM",
+                "features": np.random.rand(3, n_features).astype(np.float32),
+                "ref_image": "sm.jpg",
+            },
         ]
         query = np.random.rand(n_features).astype(np.float32)
         result = db.find_visual_match(query, k=1)
 
+        assert result is not None
         sim = result[0]["similarity"]
         assert -1.0 <= sim <= 1.0, f"유사도 값이 범위 밖에 있습니다: {sim}"

@@ -29,6 +29,15 @@ dependencies = [
     "mobile-sam @ git+https://github.com/ChaoningZhang/MobileSAM.git",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "hypothesis",
+    "pytest",
+    "pre-commit",
+]
+
 [tool.setuptools]
 include-package-data = true
 
