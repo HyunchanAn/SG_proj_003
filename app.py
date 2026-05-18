@@ -112,7 +112,7 @@ if uploaded_file:
                     f"""
                 <div class="metric-card">
                     <div class="metric-label">추정 조도 (Ra)</div>
-                    <div class="metric-value">{result['roughness']:.4f}</div>
+                    <div class="metric-value">{result["roughness"]:.4f}</div>
                 </div>
                 """,
                     unsafe_allow_html=True,
@@ -122,7 +122,7 @@ if uploaded_file:
                     f"""
                 <div class="metric-card">
                     <div class="metric-label">추정 광택도 (%)</div>
-                    <div class="metric-value">{result['gloss']:.1f}</div>
+                    <div class="metric-value">{result["gloss"]:.1f}</div>
                 </div>
                 """,
                     unsafe_allow_html=True,

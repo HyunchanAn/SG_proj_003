@@ -46,3 +46,7 @@ include = ["vsams*"]
 
 [tool.setuptools.package-data]
 vsams = ["data/*.json", "data/*.pth", "data/*.xlsx"]
+
+[tool.mypy]
+ignore_missing_imports = true
+

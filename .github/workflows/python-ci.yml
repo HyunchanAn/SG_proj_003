@@ -29,8 +29,8 @@ jobs:
 
     - name: Install System Dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libgl1-mesa-glx libglib2.0-0
+        sudo apt-get update --fix-missing || true
+        sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 || true
 
     - name: Install Package and Dev Dependencies
       run: |

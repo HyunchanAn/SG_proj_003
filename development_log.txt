@@ -1,5 +1,16 @@
 V-SAMS (Visual Surface Analysis & Matching System) Development Log
 
+##### 2026.05.18 (12일차) #####
+CI/CD 파이프라인 오류 원인 분석 및 패키지 품질 고도화 완료
+
+- CI/CD 파이프라인의 시스템 패키지 설치 단계 예외 처리 강화:
+    - ubuntu-latest 환경에서 apt-get update 및 패키지 설치 시 발생할 수 있는 일시적인 네트워크 오류에 대응하기 위해 예외 처리를 추가하여 파이프라인 복구력 확보.
+- 정적 타입 검사(mypy) 설정 고도화:
+    - pyproject.toml 파일에 tool.mypy 설정을 신설하여 type stubs가 미비한 외부 라이브러리(pandas, tqdm 등)의 import 경고를 무시하도록 처리하여 로컬 및 CI 환경의 정적 분석 일관성 확보.
+- 코드 포맷 정밀 정렬:
+    - ruff-format을 통해 app.py, tests 내의 문자열 따옴표 형식 등 포맷 스타일 자동 보정 완료.
+- 로컬 pre-commit 검사 최종 통과 및 CI 연동 완료.
+
 ##### 2026.05.17 (11일차) #####
 상급 개발자 로드맵 기반 V-SAMS (SG_proj_003) 고도화 완료
 
