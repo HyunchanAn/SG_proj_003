@@ -150,7 +150,7 @@ class SurfaceEvaluator:
 
                 # 2. Texture Complexity Score (Coin internal detail)
                 roi = gray[cy - cr : cy + cr, cx - cr : cx + cr]
-                texture_score = float(np.std(roi)) / 128.0
+                texture_score = float(np.std(roi)) / 128.0  # type: ignore[arg-type]
 
                 # Weighted score
                 score = pos_score * 0.4 + texture_score * 0.6
@@ -219,8 +219,8 @@ class SurfaceEvaluator:
         gray_ref = cv2.cvtColor(ref_img, cv2.COLOR_BGR2GRAY)
 
         # 1. Perform a rough pre-calculation of gloss contrast
-        std_coin = float(np.std(gray_coin))
-        std_ref = float(np.std(gray_ref))
+        std_coin = float(np.std(gray_coin))  # type: ignore[arg-type]
+        std_ref = float(np.std(gray_ref))  # type: ignore[arg-type]
         temp_gloss = (std_ref / (std_coin + 1e-6)) * 600.0
 
         # 2. Select adaptive filter kernel based on pre-gloss intensity
@@ -254,8 +254,8 @@ class SurfaceEvaluator:
         gray_coin = cv2.cvtColor(coin_img, cv2.COLOR_BGR2GRAY)
         gray_ref = cv2.cvtColor(ref_img, cv2.COLOR_BGR2GRAY)
 
-        std_coin = float(np.std(gray_coin))
-        std_ref = float(np.std(gray_ref))
+        std_coin = float(np.std(gray_coin))  # type: ignore[arg-type]
+        std_ref = float(np.std(gray_ref))  # type: ignore[arg-type]
 
         contrast_ratio = std_ref / (std_coin + 1e-6)
         contrast_ratio = np.clip(contrast_ratio, 0.0, 1.0)

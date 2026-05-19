@@ -12,14 +12,9 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-    permissions:
-      contents: write
-
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
@@ -52,15 +47,8 @@ jobs:
       run: |
         python -m ruff format --check .
 
-    - name: Run Mypy and Push Report
+    - name: Run Mypy Type Analysis
       run: |
-        python -m mypy --ignore-missing-imports --check-untyped-defs vsams/ > mypy_report.txt || true
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add mypy_report.txt
-        git commit -m "chore: update mypy report [skip ci]" || true
-        git push origin main || true
-        # Now run it normally to fail the build if there are errors
         python -m mypy --ignore-missing-imports --check-untyped-defs vsams/
 
     - name: Execute Full Suite of Tests
