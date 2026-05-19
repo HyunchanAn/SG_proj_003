@@ -10,9 +10,7 @@ class SurfaceClassifier(nn.Module):
         self.backbone = timm.create_model(
             backbone_name, pretrained=True, num_classes=0
         )  # num_classes=0 removes the head
-        num_features = self.backbone.num_features
-        assert isinstance(num_features, int)
-        self.num_features = num_features
+        self.num_features: int = self.backbone.num_features  # type: ignore
 
         # Multi-Head Architecture
         # Head 1: Material Class (e.g. Metal, Plastic, Glass)
