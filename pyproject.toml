@@ -31,7 +31,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff",
+    "ruff==0.3.0",
     "mypy",
     "hypothesis",
     "pytest",
