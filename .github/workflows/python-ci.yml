@@ -49,7 +49,7 @@ jobs:
 
     - name: Run Mypy Type Analysis
       run: |
-        python -m mypy vsams/
+        python -m mypy --ignore-missing-imports --check-untyped-defs vsams/
 
     - name: Execute Full Suite of Tests
       run: |
