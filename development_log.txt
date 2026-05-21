@@ -1,5 +1,16 @@
 V-SAMS (Visual Surface Analysis & Matching System) Development Log
 
+##### 2026.05.21 (FastAPI 연동) #####
+R.A.D.A.R(SG_proj_004) 플랫폼 통합을 위한 FastAPI 플러그인 엔드포인트 신설 및 연동 작업 완료
+
+- API 엔드포인트 연동 (FastAPI):
+    - 프로젝트 루트에 `api.py`를 신설하여 POST `/analyze` 라우터 구현 완료.
+    - 입력 이미지(이미지 바이너리)를 받아 물리적 표면 정보를 분석하고 JSON으로 반환하도록 구성.
+- 물리 엔진(DB) 반환 규격 보완:
+    - `vsams/utils/substrate_db.py` 내 `find_closest_top_k` 메서드를 개선하여, API 규격에서 요구하는 `category`와 `similarity` 필드를 함께 반환하도록 수정.
+- API 검증 및 자동화:
+    - `tests/test_api.py`를 작성하여 `TestClient` 기반 엔드포인트 동작 상태 및 예외 처리 검증 완료.
+
 ##### 2026.05.19 (13일차) #####
 CI 환경 Mypy 검사 완벽 정합성 확보 및 전체 파이프라인 통과 완료
 

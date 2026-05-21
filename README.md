@@ -82,6 +82,13 @@ pytest tests/
 pre-commit run --all-files
 ```
 
+### FastAPI 플러그인 엔드포인트 실행
+R.A.D.A.R(SG_proj_004) 플랫폼과의 연동을 위한 API 서버 구동:
+```bash
+uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+```
+실행 후 브라우저에서 `http://localhost:8000/docs` (Swagger UI)에 접속하여 엔드포인트를 검증할 수 있습니다.
+
 ---
 
 ## 6. Limitations & Future Plan

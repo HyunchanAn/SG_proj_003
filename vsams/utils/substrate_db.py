@@ -148,10 +148,16 @@ class SubstrateDB:
 
         results = []
         for _, row in top_k.iterrows():
+            dist = float(row["distance"])
+            similarity = 1.0 / (1.0 + dist)
+            category_val = row.get("classification", "Unknown")
+
             results.append(
                 {
                     "product_name": row["product_name"],
-                    "distance": float(row["distance"]),
+                    "category": str(category_val),
+                    "distance": dist,
+                    "similarity": similarity,
                     "roughness": float(row["roughness_avg"]),
                     "gloss": float(row["gloss_avg"]),
                 }
