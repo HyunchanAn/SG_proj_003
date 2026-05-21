@@ -82,12 +82,37 @@ pytest tests/
 pre-commit run --all-files
 ```
 
-### FastAPI 플러그인 엔드포인트 실행
+### FastAPI 플러그인 엔드포인트 실행 및 API 명세
 R.A.D.A.R(SG_proj_004) 플랫폼과의 연동을 위한 API 서버 구동:
 ```bash
 uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 ```
 실행 후 브라우저에서 `http://localhost:8000/docs` (Swagger UI)에 접속하여 엔드포인트를 검증할 수 있습니다.
+
+#### API 요청 예시 (cURL)
+```bash
+curl -X POST "http://localhost:8000/analyze" \
+     -H "accept: application/json" \
+     -H "Content-Type: multipart/form-data" \
+     -F "file=@test_image.jpg"
+```
+
+#### API 응답 예시 (JSON)
+```json
+{
+  "roughness_ra": 0.154,
+  "gloss_percent": 82.5,
+  "detected_finish": "BA",
+  "confidence": 0.985,
+  "matching_substrates": [
+    {
+      "product_name": "SUS304-BA-01",
+      "category": "BA",
+      "similarity": 0.985
+    }
+  ]
+}
+```
 
 ---
 
