@@ -29,15 +29,6 @@ dependencies = [
     "mobile-sam @ git+https://github.com/ChaoningZhang/MobileSAM.git",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "ruff==0.3.0",
-    "mypy",
-    "hypothesis",
-    "pytest",
-    "pre-commit",
-]
-
 [tool.setuptools]
 include-package-data = true
 
@@ -46,7 +37,3 @@ include = ["vsams*"]
 
 [tool.setuptools.package-data]
 vsams = ["data/*.json", "data/*.pth", "data/*.xlsx"]
-
-[tool.mypy]
-ignore_missing_imports = true
-
