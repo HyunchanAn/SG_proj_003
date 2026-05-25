@@ -4,6 +4,9 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-007ec6)](https://github.com/HyunchanAn/SG_proj_003)
 [![Vision](https://img.shields.io/badge/Vision-Mobile--SAM-d00)](https://github.com/HyunchanAn/SG_proj_003)
 [![UI](https://img.shields.io/badge/UI-Streamlit-f39c12)](https://github.com/HyunchanAn/SG_proj_003)
+
+🌐 **라이브 데모 (Live Demo)**: [https://sg-proj-003-vsams.streamlit.app/](https://sg-proj-003-vsams.streamlit.app/)
+
 본 프로젝트는 100원 동전의 실제 이미지와 금속 표면에 비친 반사광 이미지를 분석하여 표면의 물리적 특성(조도, 광택도)을 추정하고, 이를 바탕으로 금속 표면의 종류(BA, HL, #4, 2B, SM 등)를 식별하는 시스템입니다.
 
 ## 🚀 주요 기능
@@ -16,7 +19,7 @@
 4. **자동 표면 판별**: 수집된 데이터를 바탕으로 학습된 모델이 표면의 종류(BA, HL, #4, 2B, SM)를 실시간으로 예측합니다.
 
 ## 📂 프로젝트 구조
-- `data_organizer_app.py`: 데이터 수집 및 마스킹 검증 UI (Streamlit)
+- `apps/data_organizer_app.py`: 데이터 수집 및 마스킹 검증 UI (Streamlit)
 - `vsams/analysis/surface_evaluator.py`: 핵심 분석 엔진 (SAM & 물리 수치 계산)
 - `vsams/utils/substrate_db.py`: 엑셀 DB 연동 및 물성 매칭 모듈
 - `dataset/verified/`: 사용자가 검증한 고품질 데이터셋 및 메타데이터 저장소
@@ -30,7 +33,7 @@ pip install -r requirements.txt
 ### 2. 데이터 정리 도구 실행 (Data Organizer)
 학습용 데이터를 구축하거나 마스킹 품질을 검증할 때 사용합니다.
 ```powershell
-python -m streamlit run data_organizer_app.py
+python -m streamlit run apps/data_organizer_app.py
 ```
 
 ## 📈 기술 스택
