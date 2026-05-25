@@ -8,8 +8,7 @@ import numpy as np
 from streamlit_drawable_canvas import st_canvas
 
 # 프로젝트 루트 경로 추가 (패키지 임포트 지원)
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
+sys.path.append(str(Path(__file__).parent))
 
 from vsams.utils.substrate_db import SubstrateDB
 from vsams.analysis.surface_evaluator import SurfaceEvaluator
@@ -65,7 +64,7 @@ with st.sidebar:
     target_image = None
     
     if input_mode == "테스트 데이터셋":
-        test_root = project_root / "test_260420_surface"
+        test_root = Path("test_260420_surface")
         if test_root.exists():
             folders = [f.name for f in test_root.iterdir() if f.is_dir()]
             selected_folder = st.selectbox("표면 폴더 선택", folders)
