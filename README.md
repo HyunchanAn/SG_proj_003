@@ -15,14 +15,17 @@
     - **조도 (Roughness, Ra)**: 표면의 텍스처 밀도와 에지 강도를 물리적 조도(um)로 변환.
     - **광택도 (Glossiness)**: 실제 동전과 반사상 간의 상대적 선명도(Sharpness Ratio)를 비교하여 광택 수준 평가.
     - **방향성 (Directionality)**: 결의 정렬 상태를 분석하여 HL(긴 결)과 #4(짧은 결)를 정밀 구분.
-3. **Data Organizer**: 고품질 학습 데이터셋 구축을 위한 전용 관리 도구를 제공합니다. 수동 박스 마스킹을 통해 SAM 엔진의 결과를 보정할 수 있습니다.
-4. **자동 표면 판별**: 수집된 데이터를 바탕으로 학습된 모델이 표면의 종류(BA, HL, #4, 2B, SM)를 실시간으로 예측합니다.
+3. **자동 표면 판별**: 수집된 데이터를 바탕으로 학습된 모델이 표면의 종류(BA, HL, #4, 2B, SM)를 실시간으로 예측합니다.
+4. **Data Organizer**: 고품질 학습 데이터셋 구축을 위한 전용 관리 도구를 제공합니다. 수동 박스 마스킹을 통해 SAM 엔진의 결과를 보정할 수 있습니다.
 
 ## 📂 프로젝트 구조
-- `apps/data_organizer_app.py`: 데이터 수집 및 마스킹 검증 UI (Streamlit)
-- `vsams/analysis/surface_evaluator.py`: 핵심 분석 엔진 (SAM & 물리 수치 계산)
-- `vsams/utils/substrate_db.py`: 엑셀 DB 연동 및 물성 매칭 모듈
-- `dataset/verified/`: 사용자가 검증한 고품질 데이터셋 및 메타데이터 저장소
+- `app.py`: 메인 표면 분석 UI (Streamlit 배포용 진입점)
+- `apps/`: 데이터 수집 및 관리용 보조 앱 (`data_organizer_app.py` 등)
+- `vsams/`: 분석 엔진, 모델, DB 연동 등 핵심 로직 패키지
+- `dataset/`: 검증된 고품질 데이터셋 및 메타데이터 저장소
+- `scripts/`: 데이터 재계산, 모델 학습 등 독립 실행형 유틸리티 스크립트
+- `docs/`: 개발 일지(development_log.txt) 및 실험 리포트, 메모 등 문서 보관
+- `assets/`: 엑셀 등 외부 리소스 파일 보관
 
 ## 🛠 설치 및 실행
 ### 1. 환경 설치
@@ -30,7 +33,13 @@
 pip install -r requirements.txt
 ```
 
-### 2. 데이터 정리 도구 실행 (Data Organizer)
+### 2. 메인 앱 실행 (표면 분석)
+라이브 데모와 동일한 웹 앱을 로컬에서 실행합니다.
+```powershell
+python -m streamlit run app.py
+```
+
+### 3. 데이터 정리 도구 실행 (Data Organizer)
 학습용 데이터를 구축하거나 마스킹 품질을 검증할 때 사용합니다.
 ```powershell
 python -m streamlit run apps/data_organizer_app.py
@@ -43,4 +52,4 @@ python -m streamlit run apps/data_organizer_app.py
 - **Database**: Pandas, Excel
 
 ---
-*마지막 업데이트: 2026-04-24*
+*마지막 업데이트: 2026-05-25*
