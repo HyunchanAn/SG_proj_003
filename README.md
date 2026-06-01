@@ -9,6 +9,18 @@ V-SAMS는 산업용 스테인리스강의 표면 마감 상태를 동전 반사 
 
 ---
 
+## Technical Architecture & Workflow
+
+### Architecture Diagram
+```mermaid
+graph TD
+    A[Metal Surface Image] --> B[ROI Detection (CLAHE)]
+    B --> C[Adaptive Blurring]
+    C --> D[MobileSAM Feature Extraction]
+    D --> E[Hybrid AI & Physics Engine]
+    E --> F[Roughness (Ra) & Gloss Output]
+```
+
 ## 1. Key Features
 
 1. 지능형 ROI 자동 탐지
