@@ -19,7 +19,7 @@ setup(
         "scikit-learn",
         "requests",
         "tqdm",
-        "huggingface_hub",
+        "huggingface_hub"
     ],
     author="V-SAMS Team",
     description="Visual-based Surface Analysis & Matching System",
