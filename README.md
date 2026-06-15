@@ -1,9 +1,9 @@
 # V-SAMS (Surface Analysis & Measurement System)
 
-[![Status](https://img.shields.io/badge/Status-Completed-success)]
-[![Python](https://img.shields.io/badge/Python-3.10-blue)]
-[![Framework](https://img.shields.io/badge/Framework-PyTorch_OpenCV-orange)]
-[![Hardware](https://img.shields.io/badge/Hardware-RTX_5080-lightgrey)]
+![Status](https://img.shields.io/badge/Status-Completed-success)
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![Framework](https://img.shields.io/badge/Framework-PyTorch_OpenCV-orange)
+![Hardware](https://img.shields.io/badge/Hardware-RTX_5080-lightgrey)
 
 ## 1. 개요
 산업용 스테인리스강의 표면 마감 상태를 동전 반사 원리 및 이미지 특징 공간 분석을 결합하여 분류 및 정량 분석하는 측정 엔진입니다. 향후 SG_proj_004 종합 플랫폼의 서브 엔진으로 병합될 예정입니다.
