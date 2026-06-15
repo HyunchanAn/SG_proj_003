@@ -14,15 +14,15 @@ class SubstrateDB:
         self.excel_path = Path(excel_path).resolve()
         self.df = None
         self.visual_library = None
-        
+
         # 기본 경로 설정 (기존 코드 유지)
         if excel_path is None:
-             default_excel = DATA_DIR / "substrate_properties.xlsx"
-             if default_excel.exists():
-                 self.excel_path = default_excel
-             else:
-                 # 사용자가 제공한 새 엑셀 파일이 루트에 있음
-                 self.excel_path = Path("피착재 종류 및 물성(AI화)2.xlsx").resolve()
+            default_excel = DATA_DIR / "substrate_properties.xlsx"
+            if default_excel.exists():
+                self.excel_path = default_excel
+            else:
+                # 사용자가 제공한 새 엑셀 파일이 루트에 있음
+                self.excel_path = Path("피착재 종류 및 물성(AI화)2.xlsx").resolve()
         else:
             self.excel_path = Path(excel_path).resolve()
 
@@ -30,7 +30,7 @@ class SubstrateDB:
             self.load_new_db()
         else:
             self.load_db()
-        
+
         self.load_visual_library(DATA_DIR / "visual_library.pth")
 
     def load_db(self):
@@ -62,9 +62,13 @@ class SubstrateDB:
             for col in numeric_cols:
                 self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
 
-            self.df["roughness_avg"] = self.df[["roughness_md", "roughness_td"]].mean(axis=1)
+            self.df["roughness_avg"] = self.df[["roughness_md", "roughness_td"]].mean(
+                axis=1
+            )
             self.df["gloss_avg"] = self.df[["gloss_md", "gloss_td"]].mean(axis=1)
-            self.df = self.df.dropna(subset=["roughness_avg", "gloss_avg"]).reset_index(drop=True)
+            self.df = self.df.dropna(subset=["roughness_avg", "gloss_avg"]).reset_index(
+                drop=True
+            )
 
             print(f"Successfully loaded {len(self.df)} products from DB.")
         except Exception as e:
@@ -85,21 +89,27 @@ class SubstrateDB:
                 5: "roughness_md",
                 6: "roughness_td",
                 7: "gloss_md",
-                8: "gloss_td"
+                8: "gloss_td",
             }
             self.df = data[list(mapping.keys())].rename(columns=mapping)
-            
+
             # 5가지 대상 품목만 필터링 (BA, #4, HL, SM, 2B)
             targets = ["BA", "#4", "HL", "SM", "2B"]
-            self.df = self.df[self.df["product_name"].str.contains("|".join(targets), na=False)].reset_index(drop=True)
-            
+            self.df = self.df[
+                self.df["product_name"].str.contains("|".join(targets), na=False)
+            ].reset_index(drop=True)
+
             numeric_cols = ["roughness_md", "roughness_td", "gloss_md", "gloss_td"]
             for col in numeric_cols:
                 self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
 
-            self.df["roughness_avg"] = self.df[["roughness_md", "roughness_td"]].mean(axis=1)
+            self.df["roughness_avg"] = self.df[["roughness_md", "roughness_td"]].mean(
+                axis=1
+            )
             self.df["gloss_avg"] = self.df[["gloss_md", "gloss_td"]].mean(axis=1)
-            self.df = self.df.dropna(subset=["roughness_avg", "gloss_avg"]).reset_index(drop=True)
+            self.df = self.df.dropna(subset=["roughness_avg", "gloss_avg"]).reset_index(
+                drop=True
+            )
 
             print(f"Successfully loaded {len(self.df)} target products from new DB.")
         except Exception as e:

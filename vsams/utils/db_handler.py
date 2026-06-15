@@ -2,7 +2,6 @@ import json
 
 from vsams.paths import DATA_DIR
 
-
 DB_PATH = DATA_DIR / "database.json"
 
 

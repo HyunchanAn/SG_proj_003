@@ -1,8 +1,9 @@
+from typing import Any, Dict, List, Optional, Union
+
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw
 import torch
-from typing import Dict, List, Optional, Union, Any
+from PIL import Image, ImageDraw
 
 
 class SurfaceEvaluator:
@@ -115,7 +116,7 @@ class SurfaceEvaluator:
         orig_h, orig_w = img.shape[:2]
         max_dim = 800.0
         scale = 1.0
-        
+
         # Optimization: Downsample if image is too large to prevent HoughCircles hanging
         if max(orig_h, orig_w) > max_dim:
             scale = max_dim / float(max(orig_h, orig_w))

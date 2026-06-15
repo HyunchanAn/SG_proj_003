@@ -1,5 +1,6 @@
-import pandas as pd
 import sys
+
+import pandas as pd
 
 try:
     file_path = "/Users/hyunchanan/Documents/GitHub/SG_proj_003/dataset/세계화학 제품분류_6.xlsx"
