@@ -35,7 +35,7 @@ def setup_full_dataset():
 
     # 2. MINC-2500 (Materials in Context) - Hugging Face 사용
     print("Downloading MINC-2500 from Hugging Face...")
-    minc_path = snapshot_download(
+    snapshot_download(
         repo_id="mcimpoi/minc-2500_split_1", repo_type="dataset", local_dir="minc-2500"
     )
 
