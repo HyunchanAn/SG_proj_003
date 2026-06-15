@@ -8,10 +8,9 @@ import pandas as pd
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from PIL import Image
-from tqdm import tqdm
-
-from vsams.analysis.surface_evaluator import SurfaceEvaluator
+from PIL import Image  # noqa: E402
+from tqdm import tqdm  # noqa: E402
+from vsams.analysis.surface_evaluator import SurfaceEvaluator  # noqa: E402
 
 # --- 설정 ---
 DATA_DIR = project_root / "dataset" / "verified"

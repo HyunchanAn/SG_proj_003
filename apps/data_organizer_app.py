@@ -12,8 +12,8 @@ from streamlit_drawable_canvas import st_canvas
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from vsams.analysis.surface_evaluator import SurfaceEvaluator
-from vsams.utils.substrate_db import SubstrateDB
+from vsams.analysis.surface_evaluator import SurfaceEvaluator  # noqa: E402
+from vsams.utils.substrate_db import SubstrateDB  # noqa: E402
 
 # --- 페이지 설정 ---
 st.set_page_config(page_title="V-SAMS Data Organizer", page_icon="📂", layout="wide")
