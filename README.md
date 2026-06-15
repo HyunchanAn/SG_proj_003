@@ -1,63 +1,55 @@
-# V-SAMS (Surface Analysis & Measurement System)
+# V-SAMS (Visual Surface Analysis & Matching System)
 
-![Status](https://img.shields.io/badge/Status-Completed-success)
-![Python](https://img.shields.io/badge/Python-3.10-blue)
-![Framework](https://img.shields.io/badge/Framework-PyTorch_OpenCV-orange)
-![Hardware](https://img.shields.io/badge/Hardware-RTX_5080-lightgrey)
+[![Status](https://img.shields.io/badge/Status-Stable_v1.0-4c1)](https://github.com/HyunchanAn/SG_proj_003)
+[![Python](https://img.shields.io/badge/Python-3.10+-007ec6)](https://github.com/HyunchanAn/SG_proj_003)
+[![Vision](https://img.shields.io/badge/Vision-Mobile--SAM-d00)](https://github.com/HyunchanAn/SG_proj_003)
+[![UI](https://img.shields.io/badge/UI-Streamlit-f39c12)](https://github.com/HyunchanAn/SG_proj_003)
 
-## 1. 개요
-산업용 스테인리스강의 표면 마감 상태를 동전 반사 원리 및 이미지 특징 공간 분석을 결합하여 분류 및 정량 분석하는 측정 엔진입니다. 향후 SG_proj_004 종합 플랫폼의 서브 엔진으로 병합될 예정입니다.
+🌐 **라이브 데모 (Live Demo)**: [https://sg-proj-003-vsams.streamlit.app/](https://sg-proj-003-vsams.streamlit.app/)
 
-## 2. 아키텍처 다이어그램
-```mermaid
-graph TD
-    subgraph ROI Identification
-        A[Metal Surface Input Image] --> B[CLAHE Preprocessing]
-        B --> C[Texture Analysis & Edge Detection]
-        C --> D[Coin Location Tracking]
-        D --> E[Adaptive Center Weighting Application]
-    end
-    subgraph Physical Feature Extraction
-        E --> F[Adaptive Blurring Module]
-        F --> G[Grain Noise Reduction]
-        G --> H[Reflection Sharpness Extraction]
-        H --> I[Roughness Ra and Gloss Quantification]
-    end
-    subgraph AI Hybrid Classification
-        A --> J[MobileSAM vit_t Backbone]
-        J --> K[Micro-texture 2048D Vector Indexing]
-        I --> L[Weight Integration Engine]
-        K --> L
-        L --> M[Surface Finish Category Output SM/BA/HL]
-    end
+본 프로젝트는 100원 동전의 실제 이미지와 금속 표면에 비친 반사광 이미지를 분석하여 표면의 물리적 특성(조도, 광택도)을 추정하고, 이를 바탕으로 금속 표면의 종류(BA, HL, #4, 2B, SM 등)를 식별하는 시스템입니다.
+
+## 🚀 주요 기능
+1. **정밀 영역 추출 (SAM 기반)**: Meta의 SAM(Segment Anything Model)을 활용하여 복잡한 배경 속에서도 동전과 반사광 영역을 픽셀 단위로 정확히 분리합니다.
+2. **물성 추정 알고리즘**:
+    - **조도 (Roughness, Ra)**: 표면의 텍스처 밀도와 에지 강도를 물리적 조도(um)로 변환.
+    - **광택도 (Glossiness)**: 실제 동전과 반사상 간의 상대적 선명도(Sharpness Ratio)를 비교하여 광택 수준 평가.
+    - **방향성 (Directionality)**: 결의 정렬 상태를 분석하여 HL(긴 결)과 #4(짧은 결)를 정밀 구분.
+3. **자동 표면 판별**: 수집된 데이터를 바탕으로 학습된 모델이 표면의 종류(BA, HL, #4, 2B, SM)를 실시간으로 예측합니다.
+4. **Data Organizer**: 고품질 학습 데이터셋 구축을 위한 전용 관리 도구를 제공합니다. 수동 박스 마스킹을 통해 SAM 엔진의 결과를 보정할 수 있습니다.
+
+## 📂 프로젝트 구조
+- `app.py`: 메인 표면 분석 UI (Streamlit 배포용 진입점)
+- `apps/`: 데이터 수집 및 관리용 보조 앱 (`data_organizer_app.py` 등)
+- `vsams/`: 분석 엔진, 모델, DB 연동 등 핵심 로직 패키지
+- `dataset/`: 검증된 고품질 데이터셋 및 메타데이터 저장소
+- `scripts/`: 데이터 재계산, 모델 학습 등 독립 실행형 유틸리티 스크립트
+- `docs/`: 개발 일지(development_log.txt) 및 실험 리포트, 메모 등 문서 보관
+- `assets/`: 엑셀 등 외부 리소스 파일 보관
+
+## 🛠 설치 및 실행
+### 1. 환경 설치
+```powershell
+pip install -r requirements.txt
 ```
 
-## 3. 기술 스택
-- Language: Python 3.10+
-- Backend/AI Engine: PyTorch, MobileSAM (vit_t), OpenCV
-- Frontend/UI: Streamlit, FastAPI
-- Verification/Linting: Ruff, Mypy, Black, Isort, Pytest
+### 2. 메인 앱 실행 (표면 분석)
+라이브 데모와 동일한 웹 앱을 로컬에서 실행합니다.
+```powershell
+python -m streamlit run app.py
+```
 
-## 4. 데이터셋 출처
-- 분류 평가를 위해 수집된 내부 스테인리스강 표면 마감 데이터 활용.
+### 3. 데이터 정리 도구 실행 (Data Organizer)
+학습용 데이터를 구축하거나 마스킹 품질을 검증할 때 사용합니다.
+```powershell
+python -m streamlit run apps/data_organizer_app.py
+```
 
-## 5. 주요 기능
-- 전처리 및 질감 분석 알고리즘을 통한 기준 물체(동전) 자동 탐지.
-- 가변 블러링 기술을 활용한 표면 노이즈 제거 및 반사상 선명도 추출.
-- 조도 및 광택도 수치를 통한 표면 마감 상태 분류.
-- 시각 특징 벡터(MobileSAM)와 물리 기반 추정값을 혼합한 판정 기능.
+## 📈 기술 스택
+- **Engine**: PyTorch, Mobile-SAM (vit_t)
+- **Image Processing**: OpenCV, PIL
+- **UI**: Streamlit, Streamlit-Drawable-Canvas
+- **Database**: Pandas, Excel
 
-## 6. 설치 및 실행 방법
-1. 설치
-   ```bash
-   pip install -e .[dev]
-   pre-commit install
-   ```
-2. 웹 인터페이스 실행
-   ```bash
-   streamlit run app.py
-   ```
-3. API 엔드포인트 실행
-   ```bash
-   uvicorn api:app --host 0.0.0.0 --port 8000 --reload
-   ```
+---
+*마지막 업데이트: 2026-05-25*
