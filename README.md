@@ -1,55 +1,57 @@
-# V-SAMS (Visual Surface Analysis & Matching System)
+﻿# V-SAMS (Visual Surface Analysis & Matching System)
 
-[![Status](https://img.shields.io/badge/Status-Stable_v1.0-4c1)](https://github.com/HyunchanAn/SG_proj_003)
-[![Python](https://img.shields.io/badge/Python-3.10+-007ec6)](https://github.com/HyunchanAn/SG_proj_003)
-[![Vision](https://img.shields.io/badge/Vision-Mobile--SAM-d00)](https://github.com/HyunchanAn/SG_proj_003)
+[![Status](https://img.shields.io/badge/Status-Stable_v1.0-4c1)![Status](https://img.shields.io/badge/Status-Completed-success)
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![Framework](https://img.shields.io/badge/Framework-PyTorch_OpenCV-orange)
+![Hardware](https://img.shields.io/badge/Hardware-RTX_5080-lightgrey)](https://github.com/HyunchanAn/SG_proj_003)
 [![UI](https://img.shields.io/badge/UI-Streamlit-f39c12)](https://github.com/HyunchanAn/SG_proj_003)
 
-🌐 **라이브 데모 (Live Demo)**: [https://sg-proj-003-vsams.streamlit.app/](https://sg-proj-003-vsams.streamlit.app/)
+?뙋 **?쇱씠釉??곕え (Live Demo)**: [https://sg-proj-003-vsams.streamlit.app/](https://sg-proj-003-vsams.streamlit.app/)
 
-본 프로젝트는 100원 동전의 실제 이미지와 금속 표면에 비친 반사광 이미지를 분석하여 표면의 물리적 특성(조도, 광택도)을 추정하고, 이를 바탕으로 금속 표면의 종류(BA, HL, #4, 2B, SM 등)를 식별하는 시스템입니다.
+蹂??꾨줈?앺듃??100???숈쟾???ㅼ젣 ?대?吏? 湲덉냽 ?쒕㈃??鍮꾩튇 諛섏궗愿??대?吏瑜?遺꾩꽍?섏뿬 ?쒕㈃??臾쇰━???뱀꽦(議곕룄, 愿묓깮????異붿젙?섍퀬, ?대? 諛뷀깢?쇰줈 湲덉냽 ?쒕㈃??醫낅쪟(BA, HL, #4, 2B, SM ??瑜??앸퀎?섎뒗 ?쒖뒪?쒖엯?덈떎.
 
-## 🚀 주요 기능
-1. **정밀 영역 추출 (SAM 기반)**: Meta의 SAM(Segment Anything Model)을 활용하여 복잡한 배경 속에서도 동전과 반사광 영역을 픽셀 단위로 정확히 분리합니다.
-2. **물성 추정 알고리즘**:
-    - **조도 (Roughness, Ra)**: 표면의 텍스처 밀도와 에지 강도를 물리적 조도(um)로 변환.
-    - **광택도 (Glossiness)**: 실제 동전과 반사상 간의 상대적 선명도(Sharpness Ratio)를 비교하여 광택 수준 평가.
-    - **방향성 (Directionality)**: 결의 정렬 상태를 분석하여 HL(긴 결)과 #4(짧은 결)를 정밀 구분.
-3. **자동 표면 판별**: 수집된 데이터를 바탕으로 학습된 모델이 표면의 종류(BA, HL, #4, 2B, SM)를 실시간으로 예측합니다.
-4. **Data Organizer**: 고품질 학습 데이터셋 구축을 위한 전용 관리 도구를 제공합니다. 수동 박스 마스킹을 통해 SAM 엔진의 결과를 보정할 수 있습니다.
+## ?? 二쇱슂 湲곕뒫
+1. **?뺣? ?곸뿭 異붿텧 (SAM 湲곕컲)**: Meta??SAM(Segment Anything Model)???쒖슜?섏뿬 蹂듭옟??諛곌꼍 ?띿뿉?쒕룄 ?숈쟾怨?諛섏궗愿??곸뿭???쎌? ?⑥쐞濡??뺥솗??遺꾨━?⑸땲??
+2. **臾쇱꽦 異붿젙 ?뚭퀬由ъ쬁**:
+    - **議곕룄 (Roughness, Ra)**: ?쒕㈃???띿뒪泥?諛?꾩? ?먯? 媛뺣룄瑜?臾쇰━??議곕룄(um)濡?蹂??
+    - **愿묓깮??(Glossiness)**: ?ㅼ젣 ?숈쟾怨?諛섏궗??媛꾩쓽 ?곷????좊챸??Sharpness Ratio)瑜?鍮꾧탳?섏뿬 愿묓깮 ?섏? ?됯?.
+    - **諛⑺뼢??(Directionality)**: 寃곗쓽 ?뺣젹 ?곹깭瑜?遺꾩꽍?섏뿬 HL(湲?寃?怨?#4(吏㏃? 寃?瑜??뺣? 援щ텇.
+3. **?먮룞 ?쒕㈃ ?먮퀎**: ?섏쭛???곗씠?곕? 諛뷀깢?쇰줈 ?숈뒿??紐⑤뜽???쒕㈃??醫낅쪟(BA, HL, #4, 2B, SM)瑜??ㅼ떆媛꾩쑝濡??덉륫?⑸땲??
+4. **Data Organizer**: 怨좏뭹吏??숈뒿 ?곗씠?곗뀑 援ъ텞???꾪븳 ?꾩슜 愿由??꾧뎄瑜??쒓났?⑸땲?? ?섎룞 諛뺤뒪 留덉뒪?뱀쓣 ?듯빐 SAM ?붿쭊??寃곌낵瑜?蹂댁젙?????덉뒿?덈떎.
 
-## 📂 프로젝트 구조
-- `app.py`: 메인 표면 분석 UI (Streamlit 배포용 진입점)
-- `apps/`: 데이터 수집 및 관리용 보조 앱 (`data_organizer_app.py` 등)
-- `vsams/`: 분석 엔진, 모델, DB 연동 등 핵심 로직 패키지
-- `dataset/`: 검증된 고품질 데이터셋 및 메타데이터 저장소
-- `scripts/`: 데이터 재계산, 모델 학습 등 독립 실행형 유틸리티 스크립트
-- `docs/`: 개발 일지(development_log.txt) 및 실험 리포트, 메모 등 문서 보관
-- `assets/`: 엑셀 등 외부 리소스 파일 보관
+## ?뱛 ?꾨줈?앺듃 援ъ“
+- `app.py`: 硫붿씤 ?쒕㈃ 遺꾩꽍 UI (Streamlit 諛고룷??吏꾩엯??
+- `apps/`: ?곗씠???섏쭛 諛?愿由ъ슜 蹂댁“ ??(`data_organizer_app.py` ??
+- `vsams/`: 遺꾩꽍 ?붿쭊, 紐⑤뜽, DB ?곕룞 ???듭떖 濡쒖쭅 ?⑦궎吏
+- `dataset/`: 寃利앸맂 怨좏뭹吏??곗씠?곗뀑 諛?硫뷀??곗씠????μ냼
+- `scripts/`: ?곗씠???ш퀎?? 紐⑤뜽 ?숈뒿 ???낅┰ ?ㅽ뻾???좏떥由ы떚 ?ㅽ겕由쏀듃
+- `docs/`: 媛쒕컻 ?쇱?(development_log.txt) 諛??ㅽ뿕 由ы룷?? 硫붾え ??臾몄꽌 蹂닿?
+- `assets/`: ?묒? ???몃? 由ъ냼???뚯씪 蹂닿?
 
-## 🛠 설치 및 실행
-### 1. 환경 설치
+## ?썱 ?ㅼ튂 諛??ㅽ뻾
+### 1. ?섍꼍 ?ㅼ튂
 ```powershell
 pip install -r requirements.txt
 ```
 
-### 2. 메인 앱 실행 (표면 분석)
-라이브 데모와 동일한 웹 앱을 로컬에서 실행합니다.
+### 2. 硫붿씤 ???ㅽ뻾 (?쒕㈃ 遺꾩꽍)
+?쇱씠釉??곕え? ?숈씪?????깆쓣 濡쒖뺄?먯꽌 ?ㅽ뻾?⑸땲??
 ```powershell
 python -m streamlit run app.py
 ```
 
-### 3. 데이터 정리 도구 실행 (Data Organizer)
-학습용 데이터를 구축하거나 마스킹 품질을 검증할 때 사용합니다.
+### 3. ?곗씠???뺣━ ?꾧뎄 ?ㅽ뻾 (Data Organizer)
+?숈뒿???곗씠?곕? 援ъ텞?섍굅??留덉뒪???덉쭏??寃利앺븷 ???ъ슜?⑸땲??
 ```powershell
 python -m streamlit run apps/data_organizer_app.py
 ```
 
-## 📈 기술 스택
+## ?뱢 湲곗닠 ?ㅽ깮
 - **Engine**: PyTorch, Mobile-SAM (vit_t)
 - **Image Processing**: OpenCV, PIL
 - **UI**: Streamlit, Streamlit-Drawable-Canvas
 - **Database**: Pandas, Excel
 
 ---
-*마지막 업데이트: 2026-05-25*
+*留덉?留??낅뜲?댄듃: 2026-05-25*
+

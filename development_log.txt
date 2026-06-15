@@ -139,3 +139,6 @@ Launchpad 완성 및 핵심 엔진 연결
 2026-06-08 16:18:00
 - GitHub Release(v1.0.0) 생성 완료. 프로젝트 안정화 및 마일스톤 달성을 기록함.
 
+
+[2026-06-15 09:15] 브랜치 통합
+- feature/fastapi-integration, feat/cleanup 브랜치를 main으로 병합 (수동 및 충돌 제외)
