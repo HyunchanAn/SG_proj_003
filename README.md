@@ -1,57 +1,63 @@
-﻿# V-SAMS (Visual Surface Analysis & Matching System)
+# V-SAMS (Surface Analysis & Measurement System)
 
-[![Status](https://img.shields.io/badge/Status-Stable_v1.0-4c1)![Status](https://img.shields.io/badge/Status-Completed-success)
+![Status](https://img.shields.io/badge/Status-Completed-success)
 ![Python](https://img.shields.io/badge/Python-3.10-blue)
 ![Framework](https://img.shields.io/badge/Framework-PyTorch_OpenCV-orange)
-![Hardware](https://img.shields.io/badge/Hardware-RTX_5080-lightgrey)](https://github.com/HyunchanAn/SG_proj_003)
-[![UI](https://img.shields.io/badge/UI-Streamlit-f39c12)](https://github.com/HyunchanAn/SG_proj_003)
+![Hardware](https://img.shields.io/badge/Hardware-RTX_5080-lightgrey)
 
-?뙋 **?쇱씠釉??곕え (Live Demo)**: [https://sg-proj-003-vsams.streamlit.app/](https://sg-proj-003-vsams.streamlit.app/)
+## 1. 개요
+산업용 스테인리스강의 표면 마감 상태를 동전 반사 원리 및 이미지 특징 공간 분석을 결합하여 분류 및 정량 분석하는 측정 엔진입니다. 향후 SG_proj_004 종합 플랫폼의 서브 엔진으로 병합될 예정입니다.
 
-蹂??꾨줈?앺듃??100???숈쟾???ㅼ젣 ?대?吏? 湲덉냽 ?쒕㈃??鍮꾩튇 諛섏궗愿??대?吏瑜?遺꾩꽍?섏뿬 ?쒕㈃??臾쇰━???뱀꽦(議곕룄, 愿묓깮????異붿젙?섍퀬, ?대? 諛뷀깢?쇰줈 湲덉냽 ?쒕㈃??醫낅쪟(BA, HL, #4, 2B, SM ??瑜??앸퀎?섎뒗 ?쒖뒪?쒖엯?덈떎.
-
-## ?? 二쇱슂 湲곕뒫
-1. **?뺣? ?곸뿭 異붿텧 (SAM 湲곕컲)**: Meta??SAM(Segment Anything Model)???쒖슜?섏뿬 蹂듭옟??諛곌꼍 ?띿뿉?쒕룄 ?숈쟾怨?諛섏궗愿??곸뿭???쎌? ?⑥쐞濡??뺥솗??遺꾨━?⑸땲??
-2. **臾쇱꽦 異붿젙 ?뚭퀬由ъ쬁**:
-    - **議곕룄 (Roughness, Ra)**: ?쒕㈃???띿뒪泥?諛?꾩? ?먯? 媛뺣룄瑜?臾쇰━??議곕룄(um)濡?蹂??
-    - **愿묓깮??(Glossiness)**: ?ㅼ젣 ?숈쟾怨?諛섏궗??媛꾩쓽 ?곷????좊챸??Sharpness Ratio)瑜?鍮꾧탳?섏뿬 愿묓깮 ?섏? ?됯?.
-    - **諛⑺뼢??(Directionality)**: 寃곗쓽 ?뺣젹 ?곹깭瑜?遺꾩꽍?섏뿬 HL(湲?寃?怨?#4(吏㏃? 寃?瑜??뺣? 援щ텇.
-3. **?먮룞 ?쒕㈃ ?먮퀎**: ?섏쭛???곗씠?곕? 諛뷀깢?쇰줈 ?숈뒿??紐⑤뜽???쒕㈃??醫낅쪟(BA, HL, #4, 2B, SM)瑜??ㅼ떆媛꾩쑝濡??덉륫?⑸땲??
-4. **Data Organizer**: 怨좏뭹吏??숈뒿 ?곗씠?곗뀑 援ъ텞???꾪븳 ?꾩슜 愿由??꾧뎄瑜??쒓났?⑸땲?? ?섎룞 諛뺤뒪 留덉뒪?뱀쓣 ?듯빐 SAM ?붿쭊??寃곌낵瑜?蹂댁젙?????덉뒿?덈떎.
-
-## ?뱛 ?꾨줈?앺듃 援ъ“
-- `app.py`: 硫붿씤 ?쒕㈃ 遺꾩꽍 UI (Streamlit 諛고룷??吏꾩엯??
-- `apps/`: ?곗씠???섏쭛 諛?愿由ъ슜 蹂댁“ ??(`data_organizer_app.py` ??
-- `vsams/`: 遺꾩꽍 ?붿쭊, 紐⑤뜽, DB ?곕룞 ???듭떖 濡쒖쭅 ?⑦궎吏
-- `dataset/`: 寃利앸맂 怨좏뭹吏??곗씠?곗뀑 諛?硫뷀??곗씠????μ냼
-- `scripts/`: ?곗씠???ш퀎?? 紐⑤뜽 ?숈뒿 ???낅┰ ?ㅽ뻾???좏떥由ы떚 ?ㅽ겕由쏀듃
-- `docs/`: 媛쒕컻 ?쇱?(development_log.txt) 諛??ㅽ뿕 由ы룷?? 硫붾え ??臾몄꽌 蹂닿?
-- `assets/`: ?묒? ???몃? 由ъ냼???뚯씪 蹂닿?
-
-## ?썱 ?ㅼ튂 諛??ㅽ뻾
-### 1. ?섍꼍 ?ㅼ튂
-```powershell
-pip install -r requirements.txt
+## 2. 아키텍처 다이어그램
+```mermaid
+graph TD
+    subgraph ROI Identification
+        A[Metal Surface Input Image] --> B[CLAHE Preprocessing]
+        B --> C[Texture Analysis & Edge Detection]
+        C --> D[Coin Location Tracking]
+        D --> E[Adaptive Center Weighting Application]
+    end
+    subgraph Physical Feature Extraction
+        E --> F[Adaptive Blurring Module]
+        F --> G[Grain Noise Reduction]
+        G --> H[Reflection Sharpness Extraction]
+        H --> I[Roughness Ra and Gloss Quantification]
+    end
+    subgraph AI Hybrid Classification
+        A --> J[MobileSAM vit_t Backbone]
+        J --> K[Micro-texture 2048D Vector Indexing]
+        I --> L[Weight Integration Engine]
+        K --> L
+        L --> M[Surface Finish Category Output SM/BA/HL]
+    end
 ```
 
-### 2. 硫붿씤 ???ㅽ뻾 (?쒕㈃ 遺꾩꽍)
-?쇱씠釉??곕え? ?숈씪?????깆쓣 濡쒖뺄?먯꽌 ?ㅽ뻾?⑸땲??
-```powershell
-python -m streamlit run app.py
-```
+## 3. 기술 스택
+- Language: Python 3.10+
+- Backend/AI Engine: PyTorch, MobileSAM (vit_t), OpenCV
+- Frontend/UI: Streamlit, FastAPI
+- Verification/Linting: Ruff, Mypy, Black, Isort, Pytest
 
-### 3. ?곗씠???뺣━ ?꾧뎄 ?ㅽ뻾 (Data Organizer)
-?숈뒿???곗씠?곕? 援ъ텞?섍굅??留덉뒪???덉쭏??寃利앺븷 ???ъ슜?⑸땲??
-```powershell
-python -m streamlit run apps/data_organizer_app.py
-```
+## 4. 데이터셋 출처
+- 분류 평가를 위해 수집된 내부 스테인리스강 표면 마감 데이터 활용.
 
-## ?뱢 湲곗닠 ?ㅽ깮
-- **Engine**: PyTorch, Mobile-SAM (vit_t)
-- **Image Processing**: OpenCV, PIL
-- **UI**: Streamlit, Streamlit-Drawable-Canvas
-- **Database**: Pandas, Excel
+## 5. 주요 기능
+- 전처리 및 질감 분석 알고리즘을 통한 기준 물체(동전) 자동 탐지.
+- 가변 블러링 기술을 활용한 표면 노이즈 제거 및 반사상 선명도 추출.
+- 조도 및 광택도 수치를 통한 표면 마감 상태 분류.
+- 시각 특징 벡터(MobileSAM)와 물리 기반 추정값을 혼합한 판정 기능.
 
----
-*留덉?留??낅뜲?댄듃: 2026-05-25*
-
+## 6. 설치 및 실행 방법
+1. 설치
+   ```bash
+   pip install -e .[dev]
+   pre-commit install
+   ```
+2. 웹 인터페이스 실행
+   ```bash
+   streamlit run app.py
+   ```
+3. API 엔드포인트 실행
+   ```bash
+   uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+   ```
