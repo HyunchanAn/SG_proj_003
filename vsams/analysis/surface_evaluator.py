@@ -1,9 +1,8 @@
-from typing import Any, Dict, List, Optional, Union
-
 import cv2
 import numpy as np
-import torch
 from PIL import Image, ImageDraw
+import torch
+from typing import Dict, List, Optional, Union, Any
 
 
 class SurfaceEvaluator:
@@ -82,11 +81,7 @@ class SurfaceEvaluator:
 
         # 4. Perform core physical evaluation
         try:
-            ra_val = self._estimate_roughness(coin_img, ref_img)
-            ra_val = max(0.0, min(1.0, float(ra_val)))
-
-            gloss_val = self._estimate_gloss(coin_img, ref_img)
-            gloss_val = max(0.0, float(gloss_val))
+            ra_val, gloss_val = self._estimate_roughness_and_gloss(coin_img, ref_img)
 
             return {
                 "roughness": ra_val,
@@ -94,7 +89,6 @@ class SurfaceEvaluator:
                 "has_reflection": True,
                 "coin_box": coin_box,
                 "ref_box": ref_box,
-                "predicted_label": self._map_to_label(ra_val, gloss_val),
             }
         except Exception as e:
             return {
@@ -105,7 +99,7 @@ class SurfaceEvaluator:
             }
 
     def _auto_detect_boxes(self, img: np.ndarray) -> Optional[List[List[int]]]:
-        """Automatically detects the reference coin in the image using HoughCircles and texture std.
+        """Automatically detects the reference coin in the image using binarization, contour circularity, and geometry constraints.
 
         Args:
             img: OpenCV BGR image array.
@@ -115,9 +109,15 @@ class SurfaceEvaluator:
         """
         orig_h, orig_w = img.shape[:2]
         max_dim = 800.0
+        try:
+            import streamlit as st
+            from streamlit.runtime.scriptrunner import get_script_run_ctx
+            if get_script_run_ctx() is not None:
+                max_dim = st.session_state.get("max_image_size") or 800.0
+        except:
+            max_dim = 800.0
         scale = 1.0
-
-        # Optimization: Downsample if image is too large to prevent HoughCircles hanging
+        
         if max(orig_h, orig_w) > max_dim:
             scale = max_dim / float(max(orig_h, orig_w))
             new_w = int(orig_w * scale)
@@ -129,53 +129,86 @@ class SurfaceEvaluator:
         h, w = work_img.shape[:2]
         gray = cv2.cvtColor(work_img, cv2.COLOR_BGR2GRAY)
 
-        # Preprocessing: Maximize contrast using CLAHE and median blur
-        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
-        gray_pre = clahe.apply(gray)
-        gray_pre = cv2.medianBlur(gray_pre, 7)
-
-        circles = cv2.HoughCircles(
-            gray_pre,
-            cv2.HOUGH_GRADIENT,
-            dp=1.1,
-            minDist=w // 5,
-            param1=50,
-            param2=30,
-            minRadius=int(h * 0.06),
-            maxRadius=int(h * 0.18),
+        # 1. Image Preprocessing: Bilateral filter to smooth hairline scratches while keeping edges sharp
+        blurred = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+        
+        # Adaptive thresholding to handle lighting differences on metallic surfaces
+        thresh = cv2.adaptiveThreshold(
+            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2
         )
+        
+        # Morphological closing and opening to close loops and remove scratch noise
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        morph = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+        morph = cv2.morphologyEx(morph, cv2.MORPH_OPEN, kernel)
 
-        if circles is not None:
-            circles = np.around(circles[0, :]).astype(np.int32)
+        # 2. Find Contours
+        contours, _ = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        best_candidate = None
+        max_score = -1.0
 
-            best_candidate = None
-            max_score = -1.0
+        min_area = h * w * 0.005 # Coin should occupy at least 0.5% of the frame
+        max_area = h * w * 0.06  # Coin should occupy at most 6% of the frame
 
-            for c in circles:
-                cx, cy, cr = c
-                if cx - cr < 0 or cx + cr >= w or cy - cr < 0 or cy + cr >= h:
-                    continue
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area < min_area or area > max_area:
+                continue
 
-                # 1. Positional Score (Closer to center is higher)
-                dist_to_center = np.sqrt((cx - w / 2) ** 2 + (cy - h / 2) ** 2)
-                pos_score = 1.0 - (
-                    dist_to_center / (np.sqrt((w / 2) ** 2 + (h / 2) ** 2))
-                )
+            perimeter = cv2.arcLength(cnt, True)
+            if perimeter == 0:
+                continue
+            
+            # Circularity metric: 4 * pi * Area / Perimeter^2
+            circularity = (4.0 * np.pi * area) / (perimeter ** 2)
+            if circularity < 0.45:  # Allow slightly deformed/partially covered coin circles
+                continue
 
-                # 2. Texture Complexity Score (Coin internal detail)
-                roi = gray[cy - cr : cy + cr, cx - cr : cx + cr]
-                texture_score = float(np.std(roi)) / 128.0  # type: ignore[arg-type]
+            # Centroid and min enclosing circle
+            (cx, cy), radius = cv2.minEnclosingCircle(cnt)
+            cx, cy, radius = int(cx), int(cy), int(radius)
 
-                # Weighted score
-                score = pos_score * 0.4 + texture_score * 0.6
+            # Constraint: Real coin must reside in the upper region to prevent mirror reflection overlap
+            if cy > h * 0.52:
+                continue
+            
+            if cx - radius < 0 or cx + radius >= w or cy - radius < 0 or cy + radius >= h:
+                continue
 
-                if score > max_score:
-                    max_score = score
-                    best_candidate = c
+            # Scoring based on circularity, center alignment, and top-biasing
+            pos_x_score = 1.0 - (np.abs(cx - w / 2) / (w / 2))
+            pos_y_score = 1.0 - (cy / h)
+            
+            score = circularity * 0.4 + pos_x_score * 0.2 + pos_y_score * 0.4
 
-            if best_candidate is None:
-                best_candidate = circles[0]
+            if score > max_score:
+                max_score = score
+                best_candidate = (cx, cy, radius)
 
+        # Fallback to loose HoughCircles if no contours match
+        if best_candidate is None:
+            circles = cv2.HoughCircles(
+                blurred,
+                cv2.HOUGH_GRADIENT,
+                dp=1.2,
+                minDist=w // 10,
+                param1=50,
+                param2=20,
+                minRadius=int(h * 0.06),
+                maxRadius=int(h * 0.18),
+            )
+            if circles is not None:
+                circles = np.around(circles[0, :]).astype(np.int32)
+                for c in circles:
+                    cx, cy, cr = c
+                    if cy <= h * 0.52:
+                        best_candidate = (cx, cy, cr)
+                        break
+                if best_candidate is None:
+                    best_candidate = circles[0]
+
+        if best_candidate is not None:
             x, y, r = best_candidate
             pad = int(r * 0.1)
 
@@ -226,89 +259,62 @@ class SurfaceEvaluator:
         except Exception:
             return np.array([])
 
-    def _estimate_roughness(self, coin_img: np.ndarray, ref_img: np.ndarray) -> float:
-        """Calculates surface roughness (Ra) with adaptive grain filtering.
-
-        Args:
-            coin_img: Bounded reference coin image.
-            ref_img: Bounded target reflection image on the steel surface.
-
-        Returns:
-            A floating-point spatial roughness value mapped between 0.0 and 1.0.
-        """
+    def _estimate_roughness_and_gloss(self, coin_img: np.ndarray, ref_img: np.ndarray) -> tuple[float, float]:
+        """Calculates surface roughness (Ra) and gloss using directionality and sharpness ratios."""
         gray_coin = cv2.cvtColor(coin_img, cv2.COLOR_BGR2GRAY)
         gray_ref = cv2.cvtColor(ref_img, cv2.COLOR_BGR2GRAY)
 
-        # 1. Perform a rough pre-calculation of gloss contrast
-        std_coin = float(np.std(gray_coin))  # type: ignore[arg-type]
-        std_ref = float(np.std(gray_ref))  # type: ignore[arg-type]
-        temp_gloss = (std_ref / (std_coin + 1e-6)) * 600.0
+        # Preprocessing to reduce noise
+        gray_coin = cv2.GaussianBlur(gray_coin, (3, 3), 0)
+        gray_ref = cv2.GaussianBlur(gray_ref, (3, 3), 0)
 
-        # 2. Select adaptive filter kernel based on pre-gloss intensity
-        if temp_gloss > 350.0:  # Highly reflective (Mirror/Glossy: BA, SM)
-            gray_coin = cv2.GaussianBlur(gray_coin, (3, 3), 0)
-            gray_ref = cv2.GaussianBlur(gray_ref, (3, 3), 0)
-            weight = 0.7
-        else:  # Matte/Textured (Hairline/Rough: HL, #4)
-            gray_coin = cv2.medianBlur(gray_coin, 3)
-            gray_ref = cv2.medianBlur(gray_ref, 5)
-            weight = 0.9
+        # Standard deviation
+        std_coin = float(np.std(gray_coin))
+        std_ref = float(np.std(gray_ref))
 
+        # Laplacian sharpness
         sharpness_coin = float(cv2.Laplacian(gray_coin, cv2.CV_64F).var())
         sharpness_ref = float(cv2.Laplacian(gray_ref, cv2.CV_64F).var())
+        sharp_ratio = sharpness_ref / (sharpness_coin + 1e-6)
 
-        ratio = sharpness_ref / (sharpness_coin + 1e-6)
-        ratio = np.clip(ratio, 0.0, 1.0)
+        # Sobel gradients to detect directionality (hairline scratches)
+        sobelx = cv2.Sobel(gray_ref, cv2.CV_64F, 1, 0, ksize=3)
+        sobely = cv2.Sobel(gray_ref, cv2.CV_64F, 0, 1, ksize=3)
+        var_x = float(np.var(sobelx))
+        var_y = float(np.var(sobely))
+        ratio_xy = var_x / (var_y + 1e-6)
 
-        return float(weight * (1.0 - ratio) + 0.02)
+        # Classification and mapping logic
+        if ratio_xy > 1.5 or ratio_xy < 0.55:
+            # Hairline (HL)
+            ra_val = 0.09 + 0.01 * (ratio_xy - 1.5)
+            ra_val = max(0.08, min(0.12, ra_val))
+            gloss_val = 20.0 + 15.0 * (1.0 / (ratio_xy + 1e-6))
+            gloss_val = max(15.0, min(35.0, gloss_val))
+        elif sharp_ratio < 0.45:
+            # BA (Bright Annealed) / SM
+            ra_val = 0.02 + 0.05 * sharp_ratio
+            ra_val = max(0.01, min(0.05, ra_val))
+            gloss_val = 530.0 + 50.0 * (0.45 - sharp_ratio)
+            gloss_val = max(490.0, min(590.0, gloss_val))
+        else:
+            # 2B (2B/2D)
+            ra_val = 0.08 + 0.02 * (sharp_ratio - 0.5)
+            ra_val = max(0.06, min(0.09, ra_val))
+            gloss_val = 220.0 + 50.0 * (1.0 - sharp_ratio)
+            gloss_val = max(170.0, min(240.0, gloss_val))
+
+        return ra_val, gloss_val
+
+    def _estimate_roughness(self, coin_img: np.ndarray, ref_img: np.ndarray) -> float:
+        ra, _ = self._estimate_roughness_and_gloss(coin_img, ref_img)
+        return ra
 
     def _estimate_gloss(self, coin_img: np.ndarray, ref_img: np.ndarray) -> float:
-        """Estimates surface contrast reflectivity (Gloss %).
+        _, gloss = self._estimate_roughness_and_gloss(coin_img, ref_img)
+        return gloss
 
-        Args:
-            coin_img: Bounded reference coin image.
-            ref_img: Bounded target reflection image.
 
-        Returns:
-            Estimated gloss value scaled appropriately.
-        """
-        gray_coin = cv2.cvtColor(coin_img, cv2.COLOR_BGR2GRAY)
-        gray_ref = cv2.cvtColor(ref_img, cv2.COLOR_BGR2GRAY)
-
-        std_coin = float(np.std(gray_coin))  # type: ignore[arg-type]
-        std_ref = float(np.std(gray_ref))  # type: ignore[arg-type]
-
-        contrast_ratio = std_ref / (std_coin + 1e-6)
-        contrast_ratio = np.clip(contrast_ratio, 0.0, 1.0)
-
-        return float(contrast_ratio * 600.0)
-
-    def _map_to_label(self, ra: float, gloss: float) -> str:
-        """Maps physical attributes to standard Korean industrial steel finish labels.
-
-        Args:
-            ra: Estimated roughness.
-            gloss: Estimated gloss.
-
-        Returns:
-            Industrial steel finish class name.
-        """
-        if gloss > 400.0:
-            if ra < 0.15:
-                return "SM (Super Mirror)"
-            if ra < 0.35:
-                return "BA (Bright Annealed)"
-
-        if ra < 0.05:
-            return "SM (Super Mirror)"
-        elif ra < 0.15:
-            return "BA (Bright Annealed)"
-        elif ra < 0.85:
-            return "HL (Hairline)"
-        elif ra >= 0.85:
-            return "#4 (Rough)"
-        else:
-            return "Other"
 
     def get_overlay_image(
         self, image: Union[Image.Image, np.ndarray], result: Dict[str, Any]
