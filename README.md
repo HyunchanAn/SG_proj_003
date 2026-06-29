@@ -65,3 +65,5 @@ graph TD
 
 ---
 *Updated by System: 2026-06-29 (Resolved 260627 Analysis Report priority issues)*
+## 최신 업데이트 내역 (2026-06-29)
+- 기존의 하드코딩된 더미 예측 점수를 완전히 폐기하고, SurfaceEvaluator 객체를 통한 실제 비전 분석 로직으로 연동 완료.
