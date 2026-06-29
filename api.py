@@ -2,8 +2,16 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 import numpy as np
 import cv2
+from PIL import Image
+import sys
+from pathlib import Path
+
+# Add project root path to sys.path
+sys.path.append(str(Path(__file__).parent))
+from vsams.analysis.surface_evaluator import SurfaceEvaluator
 
 app = FastAPI(title="V-SAMS Headless API", version="0.1.0")
+evaluator = SurfaceEvaluator()
 
 @app.get("/health")
 def health_check():
@@ -18,13 +26,19 @@ async def analyze_roughness(file: UploadFile = File(...)):
         if img is None:
             raise ValueError("Invalid image file")
 
-        # Returning realistic values for integration tests based on the report.
+        # Convert BGR to RGB and load into PIL Image
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        pil_img = Image.fromarray(img_rgb)
+
+        # Run real evaluation
+        result = evaluator.analyze(pil_img)
+
         return JSONResponse(
             content={
                 "status": "success",
-                "roughness": 0.28,
-                "gloss": 28.5,
-                "finish_type": "Hairline"
+                "roughness": float(result["roughness"]),
+                "gloss": float(result["gloss"]),
+                "finish_type": result.get("predicted_label", "Unknown")
             }
         )
     except Exception as e:
@@ -36,3 +50,4 @@ async def analyze_roughness(file: UploadFile = File(...)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api:app", host="0.0.0.0", port=8003, reload=True)
+
