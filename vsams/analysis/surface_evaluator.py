@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 import torch
 from typing import Dict, List, Optional, Union, Any
+from loguru import logger
 
 
 class SurfaceEvaluator:
@@ -41,6 +42,7 @@ class SurfaceEvaluator:
             A dictionary containing physical roughness (Ra), gloss (%), analysis boxes,
             and mapped industrial finish category.
         """
+        logger.info("V-SAMS: Starting surface analysis.")
         if isinstance(image, Image.Image):
             img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         else:
@@ -237,8 +239,10 @@ class SurfaceEvaluator:
                 min(orig_h, ref_y1 + ref_height),
             ]
 
+            logger.info(f"V-SAMS: Coin automatically located. Coin box: {coin_box}, Ref box: {ref_box}")
             return [coin_box, ref_box]
 
+        logger.warning("V-SAMS: Reference coin auto-detection failed.")
         return None
 
     def _crop_box(self, img: np.ndarray, box: List[int]) -> np.ndarray:
@@ -304,6 +308,7 @@ class SurfaceEvaluator:
             gloss_val = 220.0 + 50.0 * (1.0 - sharp_ratio)
             gloss_val = max(170.0, min(240.0, gloss_val))
 
+        logger.info(f"V-SAMS: Estimated physical attributes - Roughness Ra: {ra_val:.4f} um, Gloss: {gloss_val:.1f} GU (SharpRatio: {sharp_ratio:.4f})")
         return ra_val, gloss_val
 
     def _estimate_roughness(self, coin_img: np.ndarray, ref_img: np.ndarray) -> float:

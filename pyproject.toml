@@ -27,6 +27,7 @@ dependencies = [
     "uvicorn",
     "wandb",
     "mobile-sam @ git+https://github.com/ChaoningZhang/MobileSAM.git",
+    "loguru>=0.7.0",
 ]
 
 [tool.setuptools]
