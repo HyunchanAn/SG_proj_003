@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -7,7 +7,12 @@ ENV PIP_NO_CACHE_DIR=1
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git build-essential \
+    && apt-get install -y software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends python3.11 python3.11-distutils python3.11-venv curl git build-essential \
+    && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 \
+    && ln -s /usr/bin/python3.11 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
