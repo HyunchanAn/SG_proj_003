@@ -13,57 +13,27 @@ MODULE_004_URL = os.getenv("MODULE_004_URL", "http://localhost:8004")
 
 
 class SubstrateDB:
-    def __init__(self, excel_path=None, use_api=True):
-        if excel_path is None:
-            excel_path = DATA_DIR / "substrate_properties.xlsx"
-
-        self.excel_path = Path(excel_path).resolve()
+    def __init__(self):
         self.df = None
         self.visual_library = None
 
-        # 기본 경로 설정 (기존 코드 유지)
-        if excel_path is None:
-            default_excel = DATA_DIR / "substrate_properties.xlsx"
-            if default_excel.exists():
-                self.excel_path = default_excel
-            else:
-                # 사용자가 제공한 새 엑셀 파일이 루트에 있음
-                self.excel_path = Path("피착재 종류 및 물성(AI화)2.xlsx").resolve()
-        else:
-            self.excel_path = Path(excel_path).resolve()
-
-        # 004 API 우선 시도, 실패 시 로컬 Excel 폴백
-        loaded = False
-        if use_api:
-            loaded = self.load_from_api()
-
-        if not loaded:
-            if "AI화" in str(self.excel_path):
-                self.load_new_db()
-            else:
-                self.load_db()
-
+        self._load_from_api()
         self.load_visual_library(DATA_DIR / "visual_library.pth")
 
-    def load_from_api(self) -> bool:
-        """004 DB API에서 피착재 물성 데이터를 가져옵니다. 실패 시 False를 반환합니다."""
+    def _load_from_api(self):
+        """004 DB API에서 피착재 물성 데이터를 가져옵니다."""
         try:
             res = httpx.get(f"{MODULE_004_URL}/adherend-properties", timeout=5.0)
             res.raise_for_status()
             records = res.json()
             if not records:
-                logger.warning("004 API returned empty adherend-properties list.")
-                return False
+                logger.error("004 API returned empty adherend-properties list.")
+                return
 
             self.df = pd.DataFrame(records)
 
             # API 응답 필드명을 내부 표준 필드명으로 매핑
             rename_map = {
-                "product_name": "product_name",
-                "roughness_md": "roughness_md",
-                "roughness_td": "roughness_td",
-                "gloss_md": "gloss_md",
-                "gloss_td": "gloss_td",
                 "surface_energy_md": "energy_md",
                 "surface_energy_td": "energy_td",
             }
@@ -81,93 +51,8 @@ class SubstrateDB:
 
             self.df = self.df.dropna(subset=["roughness_avg", "gloss_avg"]).reset_index(drop=True)
             logger.info(f"Loaded {len(self.df)} products from 004 API ({MODULE_004_URL}).")
-            return True
         except Exception as e:
-            logger.warning(f"004 API unavailable, falling back to local Excel: {e}")
-            return False
-
-
-    def load_db(self):
-        if not self.excel_path.exists():
-            print(f"Warning: Database file not found at {self.excel_path}")
-            return
-
-        try:
-            # We use header=None and manually slice to avoid issues with multi-index headers.
-            df_raw = pd.read_excel(self.excel_path, header=None)
-
-            data = df_raw.iloc[6:].copy()
-            mapping = {
-                1: "no",
-                2: "classification",
-                4: "product_name",
-                5: "roughness_md",
-                6: "roughness_td",
-                7: "gloss_md",
-                8: "gloss_td",
-                9: "energy_md",
-                10: "energy_td",
-            }
-
-            self.df = data[list(mapping.keys())].rename(columns=mapping)
-            self.df = self.df.dropna(subset=["product_name"]).reset_index(drop=True)
-
-            numeric_cols = ["roughness_md", "roughness_td", "gloss_md", "gloss_td"]
-            for col in numeric_cols:
-                self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
-
-            self.df["roughness_avg"] = self.df[["roughness_md", "roughness_td"]].mean(
-                axis=1
-            )
-            self.df["gloss_avg"] = self.df[["gloss_md", "gloss_td"]].mean(axis=1)
-            self.df = self.df.dropna(subset=["roughness_avg", "gloss_avg"]).reset_index(
-                drop=True
-            )
-
-            print(f"Successfully loaded {len(self.df)} products from DB.")
-        except Exception as e:
-            print(f"Error loading Excel DB: {e}")
-
-    def load_new_db(self):
-        """사용자가 제공한 '피착재 종류 및 물성(AI화)2.xlsx' 파일 전용 로더"""
-        if not self.excel_path.exists():
-            print(f"Warning: New database file not found at {self.excel_path}")
-            return
-
-        try:
-            # 7행(Index 6)부터 데이터 시작
-            df_raw = pd.read_excel(self.excel_path, header=None)
-            data = df_raw.iloc[6:].copy()
-            mapping = {
-                4: "product_name",
-                5: "roughness_md",
-                6: "roughness_td",
-                7: "gloss_md",
-                8: "gloss_td",
-            }
-            self.df = data[list(mapping.keys())].rename(columns=mapping)
-
-            # 5가지 대상 품목만 필터링 (BA, #4, HL, SM, 2B)
-            targets = ["BA", "#4", "HL", "SM", "2B"]
-            self.df = self.df[
-                self.df["product_name"].str.contains("|".join(targets), na=False)
-            ].reset_index(drop=True)
-
-            numeric_cols = ["roughness_md", "roughness_td", "gloss_md", "gloss_td"]
-            for col in numeric_cols:
-                self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
-
-            self.df["roughness_avg"] = self.df[["roughness_md", "roughness_td"]].mean(
-                axis=1
-            )
-            self.df["gloss_avg"] = self.df[["gloss_md", "gloss_td"]].mean(axis=1)
-            self.df = self.df.dropna(subset=["roughness_avg", "gloss_avg"]).reset_index(
-                drop=True
-            )
-
-            print(f"Successfully loaded {len(self.df)} target products from new DB.")
-        except Exception as e:
-            print(f"Error loading New Excel DB: {e}")
+            logger.error(f"Failed to load substrate data from 004 API: {e}")
 
     def load_visual_library(self, library_path):
         library_path = Path(library_path)
@@ -180,9 +65,9 @@ class SubstrateDB:
         try:
             # weights_only=False is required because the library contains numpy arrays.
             self.visual_library = torch.load(library_path, weights_only=False)
-            print(f"Loaded visual library with {len(self.visual_library)} products.")
+            logger.info(f"Loaded visual library with {len(self.visual_library)} products.")
         except Exception as e:
-            print(f"Error loading visual library: {e}")
+            logger.error(f"Error loading visual library: {e}")
             self.visual_library = None
 
     def find_closest(self, roughness, glossiness):
