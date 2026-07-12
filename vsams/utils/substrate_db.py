@@ -1,13 +1,19 @@
 from pathlib import Path
+import os
 
+import httpx
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 from vsams.paths import DATA_DIR
 
+# 004 DB API URL from env
+MODULE_004_URL = os.getenv("MODULE_004_URL", "http://localhost:8004")
+
 
 class SubstrateDB:
-    def __init__(self, excel_path=None):
+    def __init__(self, excel_path=None, use_api=True):
         if excel_path is None:
             excel_path = DATA_DIR / "substrate_properties.xlsx"
 
@@ -26,12 +32,60 @@ class SubstrateDB:
         else:
             self.excel_path = Path(excel_path).resolve()
 
-        if "AI화" in str(self.excel_path):
-            self.load_new_db()
-        else:
-            self.load_db()
+        # 004 API 우선 시도, 실패 시 로컬 Excel 폴백
+        loaded = False
+        if use_api:
+            loaded = self.load_from_api()
+
+        if not loaded:
+            if "AI화" in str(self.excel_path):
+                self.load_new_db()
+            else:
+                self.load_db()
 
         self.load_visual_library(DATA_DIR / "visual_library.pth")
+
+    def load_from_api(self) -> bool:
+        """004 DB API에서 피착재 물성 데이터를 가져옵니다. 실패 시 False를 반환합니다."""
+        try:
+            res = httpx.get(f"{MODULE_004_URL}/adherend-properties", timeout=5.0)
+            res.raise_for_status()
+            records = res.json()
+            if not records:
+                logger.warning("004 API returned empty adherend-properties list.")
+                return False
+
+            self.df = pd.DataFrame(records)
+
+            # API 응답 필드명을 내부 표준 필드명으로 매핑
+            rename_map = {
+                "product_name": "product_name",
+                "roughness_md": "roughness_md",
+                "roughness_td": "roughness_td",
+                "gloss_md": "gloss_md",
+                "gloss_td": "gloss_td",
+                "surface_energy_md": "energy_md",
+                "surface_energy_td": "energy_td",
+            }
+            self.df = self.df.rename(columns=rename_map)
+
+            numeric_cols = ["roughness_md", "roughness_td", "gloss_md", "gloss_td"]
+            for col in numeric_cols:
+                if col in self.df.columns:
+                    self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
+
+            if "roughness_md" in self.df.columns and "roughness_td" in self.df.columns:
+                self.df["roughness_avg"] = self.df[["roughness_md", "roughness_td"]].mean(axis=1)
+            if "gloss_md" in self.df.columns and "gloss_td" in self.df.columns:
+                self.df["gloss_avg"] = self.df[["gloss_md", "gloss_td"]].mean(axis=1)
+
+            self.df = self.df.dropna(subset=["roughness_avg", "gloss_avg"]).reset_index(drop=True)
+            logger.info(f"Loaded {len(self.df)} products from 004 API ({MODULE_004_URL}).")
+            return True
+        except Exception as e:
+            logger.warning(f"004 API unavailable, falling back to local Excel: {e}")
+            return False
+
 
     def load_db(self):
         if not self.excel_path.exists():
