@@ -37,8 +37,7 @@ async def analyze_roughness(file: UploadFile = File(...)):
             content={
                 "status": "success",
                 "roughness": float(result["roughness"]),
-                "gloss": float(result["gloss"]),
-                "finish_type": result.get("predicted_label", "Unknown")
+                "gloss": float(result["gloss"])
             }
         )
     except Exception as e:
