@@ -54,3 +54,7 @@ test_260420_surface/
 # Excel data files (data source migrated to 004 DB API)
 *.xlsx
 *.xls
+test_out.log
+demo_ui/do_refactor*.py
+demo_ui/find_indices.py
+demo_ui/refactor.py
