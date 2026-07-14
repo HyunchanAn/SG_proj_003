@@ -125,3 +125,12 @@
 - [작업 요약] 003 V-SAMS 비전 분석 출력 사양에서 표면 마감(finish_type) 판단 기능 전면 제거
 - [상세 내용]
   - api.py 내 분석 성공 응답 객체에서 finish_type 예측값 반환 필드를 영구 삭제하여 003 모듈을 순수 조도 Ra 및 광택도 GU 전용 측정 모듈로 고도화 완료.
+
+---
+Date: 2026-07-14
+Author: Antigravity
+
+[Updates]
+- Hardware Specs updated in README.md from RTX 5080/Windows to Apple M2 Pro/macOS.
+- Completed all local E2E and unit tests on macOS successfully without abort traps.
+- Verified GitHub Actions CI/CD workflows for the projects.
