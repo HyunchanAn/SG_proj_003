@@ -289,24 +289,33 @@ class SurfaceEvaluator:
         ratio_xy = var_x / (var_y + 1e-6)
 
         # Classification and mapping logic
+        # Classification and mapping logic (Recalibrated to match ground-truth Database)
         if ratio_xy > 1.5 or ratio_xy < 0.55:
             # Hairline (HL)
-            ra_val = 0.09 + 0.01 * (ratio_xy - 1.5)
-            ra_val = max(0.08, min(0.12, ra_val))
-            gloss_val = 20.0 + 15.0 * (1.0 / (ratio_xy + 1e-6))
-            gloss_val = max(15.0, min(35.0, gloss_val))
+            ra_val = 0.19 + 0.02 * (ratio_xy - 1.5)
+            ra_val = max(0.18, min(0.22, ra_val)) # 180~220 nm
+            gloss_val = 260.0 + 10.0 * (1.0 / (ratio_xy + 1e-6))
+            gloss_val = max(240.0, min(280.0, gloss_val)) # 240~280 GU
         elif sharp_ratio < 0.45:
             # BA (Bright Annealed) / SM
-            ra_val = 0.02 + 0.05 * sharp_ratio
-            ra_val = max(0.01, min(0.05, ra_val))
-            gloss_val = 530.0 + 50.0 * (0.45 - sharp_ratio)
-            gloss_val = max(490.0, min(590.0, gloss_val))
+            ra_val = 0.03 + 0.04 * sharp_ratio
+            ra_val = max(0.02, min(0.07, ra_val)) # 20~70 nm
+            gloss_val = 550.0 + 50.0 * (0.45 - sharp_ratio)
+            gloss_val = max(520.0, min(590.0, gloss_val)) # 520~590 GU
         else:
-            # 2B (2B/2D)
-            ra_val = 0.08 + 0.02 * (sharp_ratio - 0.5)
-            ra_val = max(0.06, min(0.09, ra_val))
-            gloss_val = 220.0 + 50.0 * (1.0 - sharp_ratio)
-            gloss_val = max(170.0, min(240.0, gloss_val))
+            # #4 or 2B depending on sharpness
+            if sharp_ratio > 0.6:
+                # 2B (Matte)
+                ra_val = 0.08 + 0.01 * (sharp_ratio - 0.6)
+                ra_val = max(0.07, min(0.09, ra_val)) # 70~90 nm
+                gloss_val = 220.0 - 20.0 * (sharp_ratio - 0.6)
+                gloss_val = max(200.0, min(240.0, gloss_val)) # 200~240 GU
+            else:
+                # #4 (Semi-polished)
+                ra_val = 0.10 + 0.02 * (0.6 - sharp_ratio)
+                ra_val = max(0.09, min(0.13, ra_val)) # 90~130 nm
+                gloss_val = 320.0 + 30.0 * (0.6 - sharp_ratio)
+                gloss_val = max(270.0, min(340.0, gloss_val)) # 270~340 GU
 
         logger.info(f"V-SAMS: Estimated physical attributes - Roughness Ra: {ra_val:.4f} um, Gloss: {gloss_val:.1f} GU (SharpRatio: {sharp_ratio:.4f})")
         return ra_val, gloss_val
