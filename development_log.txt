@@ -126,11 +126,11 @@
 - [상세 내용]
   - api.py 내 분석 성공 응답 객체에서 finish_type 예측값 반환 필드를 영구 삭제하여 003 모듈을 순수 조도 Ra 및 광택도 GU 전용 측정 모듈로 고도화 완료.
 
----
-Date: 2026-07-14
-Author: Antigravity
-
-[Updates]
-- Hardware Specs updated in README.md from RTX 5080/Windows to Apple M2 Pro/macOS.
-- Completed all local E2E and unit tests on macOS successfully without abort traps.
-- Verified GitHub Actions CI/CD workflows for the projects.
+## [2026-07-14]
+[작업 요약] 리드미 스펙 변경 및 macOS 환경 점검 완료
+[상세 내용]
+1. README.md 하드웨어 스펙 변경
+   - Windows/RTX 5080 환경에서 Apple M2 Pro (MacBook Pro 14 2023, 16GB Memory)로 일괄 수정
+2. macOS 로컬 테스트 및 CI/CD 점검
+   - 로컬 E2E 테스트 및 단위 테스트 통과 (Abort trap 에러 미발생)
+   - GitHub Actions CI/CD 파이프라인 런타임 유효성 재확인 완료
