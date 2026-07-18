@@ -18,6 +18,20 @@ from vsams.analysis.surface_evaluator import SurfaceEvaluator
 app = FastAPI(title="V-SAMS API", description="Vision based Surface Analysis for Material Status")
 evaluator = SurfaceEvaluator()
 
+import torch
+import gc
+from fastapi import Request
+
+@app.middleware("http")
+async def clear_vram_middleware(request: Request, call_next):
+    response = await call_next(request)
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        torch.mps.empty_cache()
+    return response
+
 class RoughnessRequest(BaseModel):
     image_data: str
 
