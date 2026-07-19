@@ -3,7 +3,7 @@
 ![Status](https://img.shields.io/badge/Status-Completed-success)
 ![Python](https://img.shields.io/badge/Python-3.10-blue)
 ![Framework](https://img.shields.io/badge/Framework-PyTorch_OpenCV-orange)
-![Hardware](https://img.shields.io/badge/Hardware-Apple_M2_Pro-lightgrey)
+![Hardware](https://img.shields.io/badge/Hardware-Mac_M2_Pro_%7C_Win_RTX5080-lightgrey)
 
 ## 1. 개요
 산업용 스테인리스강의 표면 마감 상태를 동전 반사 원리 및 이미지 특징 공간 분석을 결합하여 분류 및 정량 분석하는 측정 엔진입니다. 향후 SG_proj_004 종합 플랫폼의 서브 엔진으로 병합될 예정입니다.
@@ -47,30 +47,29 @@ graph TD
 - 조도 및 광택도 수치를 통한 표면 마감 상태 분류.
 - 시각 특징 벡터(MobileSAM)와 물리 기반 추정값을 혼합한 판정 기능.
 
-## 6. 설치 및 실행 방법
-1. 설치
+## 6. 설치 및 실행 방법 (Dual Environment)
+
+이 프로젝트는 시연용 **개별 로컬 구동(Mac)**과 테스트/개발용 **MSA 통합 구동(Windows)**을 모두 지원합니다.
+
+### [Option A] Mac 로컬 구동 (프리젠테이션 및 개별 테스트용)
+기존 방식대로 가상환경을 활성화하고 개별적으로 구동합니다.
+1. 환경 설정
    ```bash
-   pip install -e .[dev]
-   pre-commit install
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
    ```
-2. 웹 인터페이스 실행
+2. 시뮬레이터 실행
    ```bash
    streamlit run app.py
    ```
-3. API 엔드포인트 실행
-   ```bash
-   uvicorn api:app --host 0.0.0.0 --port 8000 --reload
-   ```
 
+### [Option B] Windows 워크스테이션 구동 (통합 테스트 및 딥러닝 연산용)
+메인 데스크탑(RTX 5080)에서는 `SG_sys`의 도커 컴포즈를 통해 전체 MSA 시스템을 한 번에 구동합니다.
+```powershell
+# SG_sys 디렉토리에서 실행
+docker-compose -f docker-compose-windows.yml up -d --build
+```
 
 ---
-*Updated by System: 2026-06-29 (Resolved 260627 Analysis Report priority issues)*
-## 최신 업데이트 내역
-## 최신 업데이트 내역 (2026-07-05)
-- [CI/CD]: 통합 E2E 테스트 검사 통과 및 전체 모듈 연동 보고서 발간 완료.
-- [CI/CD]: 통합 E2E 테스트 검사 통과 및 전체 모듈 연동 보고서 발간 완료.
-- [CI/CD]: 통합 E2E 테스트 검사 통과 및 전체 모듈 연동 보고서 발간 완료. (2026-06-29)
-- 기존의 하드코딩된 더미 예측 점수를 완전히 폐기하고, SurfaceEvaluator 객체를 통한 실제 비전 분석 로직으로 연동 완료.
-
-## 2026-07-05 업데이트
-- GPU 가속 컨테이너화 (nvidia/cuda:12.1.1-runtime-ubuntu22.04 기반) 완료.
+*Last Updated: 2026-07-19 (Hybrid Environment & MSA Integration)*
